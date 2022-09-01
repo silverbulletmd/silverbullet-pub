@@ -4,16 +4,18 @@
     "name": "Zef Hemel",
     "email": "zef@zef.me"
   },
-  "version": "0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "bin": {
     "silverbullet-publish": "./dist/publish.js"
   },
   "scripts": {
     "watch": "rm -rf .parcel-cache && parcel watch",
-    "build": "parcel build",
+    "build": "parcel build && plugos-bundle --dist dist --exclude @lezer/lr yaml handlebars -- publish.plug.yaml",
     "clean": "rm -rf dist",
-    "start": "plugos-bundle -w --dist dist --exclude @lezer/lr yaml handlebars -- publish.plug.yaml"
+    "start": "plugos-bundle -w --dist dist --exclude @lezer/lr yaml handlebars -- publish.plug.yaml",
+    "clean-build": "npm run clean && npm run build",
+    "pub": "npm publish --access public"
   },
   "targets": {
     "publish": {
@@ -34,6 +36,10 @@
     "dist"
   ],
   "dependencies": {
+    "@codemirror/language": "^6.0.0",
+    "@lezer/common": "1.0.0",
+    "@lezer/highlight": "1.0.0",
+    "@lezer/markdown": "1.0.1",
     "@plugos/plugos": "^0.0.32",
     "@plugos/plugos-syscall": "^0.0.32",
     "@silverbulletmd/common": "^0.0.32",
@@ -41,10 +47,6 @@
     "@silverbulletmd/plugs": "^0.0.32",
     "@silverbulletmd/server": "^0.0.32",
     "@silverbulletmd/web": "^0.0.32",
-    "@codemirror/language": "^6.0.0",
-    "@lezer/common": "1.0.0",
-    "@lezer/highlight": "1.0.0",
-    "@lezer/markdown": "1.0.1",
     "better-sqlite3": "^7.5.0",
     "handlebars": "^4.7.7",
     "jsonwebtoken": "^8.5.1",
