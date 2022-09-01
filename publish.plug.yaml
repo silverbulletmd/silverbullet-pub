@@ -1,0 +1,11 @@
+name: publish
+requiredPermissions:
+  - fs
+functions:
+  publishAll:
+    path: "./publish.ts:publishAll"
+    env: server
+  publishAllCommand:
+    path: "./publish.ts:publishAllCommand"
+    command:
+      name: "Silver Bullet Publish: Publish All"
