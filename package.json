@@ -4,7 +4,7 @@
     "name": "Zef Hemel",
     "email": "zef@zef.me"
   },
-  "version": "0.0.4",
+  "version": "0.0.5",
   "license": "MIT",
   "bin": {
     "silverbullet-publish": "./dist/publish.js"

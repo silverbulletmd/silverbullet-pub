@@ -34,7 +34,7 @@ import {
 import spaceSyscalls from "@silverbulletmd/server/syscalls/space";
 import { safeRun } from "@silverbulletmd/server/util";
 import { readFileSync } from "fs";
-import { readdir, readFile } from "fs/promises";
+import { mkdir, readdir, readFile } from "fs/promises";
 import knex from "knex";
 import path from "path";
 import yargs from "yargs";
@@ -54,15 +54,15 @@ let args = yargs(hideBin(process.argv))
     type: "boolean",
     default: false,
   })
-  .option("dist", {
+  .option("o", {
     type: "string",
-    default: "dist",
+    default: "web",
   })
   .parse();
 
 if (!args._.length) {
   console.error(
-    "Usage: silverbullet-publish [--index] [--dist <path>] <path-to-pages>"
+    "Usage: @silverbulletmd/publish [--index] [-o <path>] <path-to-pages>"
   );
   process.exit(1);
 }
@@ -160,7 +160,11 @@ async function main() {
     await system.loadedPlugs.get("core")?.invoke("reindexSpace", []);
   }
 
-  await publishPlug.invoke("publishAll", [path.resolve(args.dist)]);
+  const outputDir = path.resolve(args.o);
+
+  await mkdir(outputDir, { recursive: true });
+
+  await publishPlug.invoke("publishAll", [outputDir]);
   console.log("Done!");
   process.exit(0);
 }
