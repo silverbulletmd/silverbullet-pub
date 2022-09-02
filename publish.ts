@@ -1,6 +1,7 @@
 import { writeFile } from "@plugos/plugos-syscall/fs";
 import { invokeFunction } from "@silverbulletmd/plugos-silverbullet-syscall/system";
 import { queryPrefix } from "@silverbulletmd/plugos-silverbullet-syscall";
+import { flashNotification } from "@silverbulletmd/plugos-silverbullet-syscall/editor";
 import {
   listPages,
   readPage,
@@ -9,7 +10,6 @@ import { readYamlPage } from "@silverbulletmd/plugs/lib/yaml_page";
 
 import MarkdownIt from "markdown-it";
 import Handlebars from "handlebars";
-import { cleanMarkdown } from "@silverbulletmd/plugs/markdown/util";
 
 var taskLists = require("markdown-it-task-lists");
 
@@ -17,6 +17,23 @@ var taskLists = require("markdown-it-task-lists");
 import pageTemplate from "./page.hbs";
 // @ts-ignore
 import pageCSS from "./style.css";
+import { parseMarkdown } from "@silverbulletmd/plugos-silverbullet-syscall/markdown";
+
+import {
+  findNodeOfType,
+  renderToText,
+  replaceNodesMatching,
+} from "@silverbulletmd/common/tree";
+
+type PublishConfig = {
+  destDir?: string;
+  title?: string;
+  indexPage?: string;
+  removeHashtags?: boolean;
+  removeUnpublishedLinks?: boolean;
+  tags?: string[];
+  prefixes?: string[];
+};
 
 const md = new MarkdownIt({
   linkify: true,
@@ -34,9 +51,15 @@ async function generatePage(
   let { text } = await readPage(pageName);
   let renderPage = Handlebars.compile(pageTemplate);
   console.log("Writing", pageName);
-  const cleanMd = await cleanMarkdown(text, publishedPages);
+  const publishMd = await cleanMarkdown(
+    text,
+    publishConfig,
+    publishedPages,
+    false
+  );
+  const htmlMd = await cleanMarkdown(text, publishConfig, publishedPages, true);
   // Write .md file
-  await writeFile(mdPath, cleanMd);
+  await writeFile(mdPath, publishMd);
   // Write .html file
   await writeFile(
     htmlPath,
@@ -44,18 +67,10 @@ async function generatePage(
       pageName,
       config: publishConfig,
       css: pageCSS,
-      body: md.render(cleanMd),
+      body: md.render(htmlMd),
     })
   );
 }
-
-type PublishConfig = {
-  destDir?: string;
-  title?: string;
-  indexPage?: string;
-  tags?: string[];
-  prefixes?: string[];
-};
 
 export async function publishAll(destDir?: string) {
   let publishConfig: PublishConfig = await readYamlPage("PUBLISH");
@@ -121,5 +136,62 @@ export async function publishAll(destDir?: string) {
 }
 
 export async function publishAllCommand() {
-  await invokeFunction("server", "publishAll");
+  await flashNotification("Publishing...");
+  await await invokeFunction("server", "publishAll");
+  await flashNotification("Done!");
+}
+
+export function encodePageUrl(name: string): string {
+  return name.replaceAll(" ", "_");
+}
+
+export async function cleanMarkdown(
+  text: string,
+  publishConfig: PublishConfig,
+  validPages: string[],
+  translatePageReferences = true
+): Promise<string> {
+  let mdTree = await parseMarkdown(text);
+  replaceNodesMatching(mdTree, (n) => {
+    if (n.type === "WikiLink") {
+      const page = n.children![1].children![0].text!;
+      if (!validPages.includes(page)) {
+        if (!publishConfig.removeUnpublishedLinks) {
+          // Replace with just page text
+          return {
+            text: `_${page}_`,
+          };
+        } else {
+          return null;
+        }
+      } else if (translatePageReferences) {
+        return {
+          text: `[${page}](/${encodePageUrl(page)})`,
+        };
+      }
+    }
+    // Simply get rid of these
+    if (n.type === "CommentBlock" || n.type === "Comment") {
+      return null;
+    }
+    if (n.type === "Hashtag") {
+      if (!publishConfig.removeHashtags) {
+        return {
+          text: `__${n.children![0].text}__`,
+        };
+      } else {
+        return null;
+      }
+    }
+    if (n.type === "FencedCode") {
+      let codeInfoNode = findNodeOfType(n, "CodeInfo");
+      if (!codeInfoNode) {
+        return;
+      }
+      if (codeInfoNode.children![0].text === "meta") {
+        return null;
+      }
+    }
+  });
+  return renderToText(mdTree).trim();
 }

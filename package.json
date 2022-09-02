@@ -4,18 +4,17 @@
     "name": "Zef Hemel",
     "email": "zef@zef.me"
   },
-  "version": "0.0.2",
+  "version": "0.0.4",
   "license": "MIT",
   "bin": {
     "silverbullet-publish": "./dist/publish.js"
   },
   "scripts": {
     "watch": "rm -rf .parcel-cache && parcel watch",
-    "build": "parcel build && plugos-bundle --dist dist --exclude @lezer/lr yaml handlebars -- publish.plug.yaml",
+    "build": "plugos-bundle --dist dist --exclude @lezer/lr yaml handlebars -- publish.plug.yaml && parcel build",
     "clean": "rm -rf dist",
     "start": "plugos-bundle -w --dist dist --exclude @lezer/lr yaml handlebars -- publish.plug.yaml",
-    "clean-build": "npm run clean && npm run build",
-    "pub": "npm publish --access public"
+    "release": "npm run clean && npm run build && npm publish --access public"
   },
   "targets": {
     "publish": {
