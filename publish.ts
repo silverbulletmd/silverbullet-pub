@@ -4,6 +4,7 @@ import { queryPrefix } from "@silverbulletmd/plugos-silverbullet-syscall";
 import { flashNotification } from "@silverbulletmd/plugos-silverbullet-syscall/editor";
 import {
   listPages,
+  readAttachment,
   readPage,
 } from "@silverbulletmd/plugos-silverbullet-syscall/space";
 import { readYamlPage } from "@silverbulletmd/plugs/lib/yaml_page";
@@ -20,7 +21,9 @@ import pageCSS from "./style.css";
 import { parseMarkdown } from "@silverbulletmd/plugos-silverbullet-syscall/markdown";
 
 import {
+  collectNodesOfType,
   findNodeOfType,
+  ParseTree,
   renderToText,
   replaceNodesMatching,
 } from "@silverbulletmd/common/tree";
@@ -30,9 +33,10 @@ type PublishConfig = {
   title?: string;
   indexPage?: string;
   removeHashtags?: boolean;
-  removeUnpublishedLinks?: boolean;
+  publishAll?: boolean;
   tags?: string[];
   prefixes?: string[];
+  footerPage?: string;
 };
 
 const md = new MarkdownIt({
@@ -46,18 +50,40 @@ async function generatePage(
   htmlPath: string,
   mdPath: string,
   publishedPages: string[],
-  publishConfig: PublishConfig
+  publishConfig: PublishConfig,
+  destDir: string,
+  footerText: string
 ) {
   let { text } = await readPage(pageName);
   let renderPage = Handlebars.compile(pageTemplate);
   console.log("Writing", pageName);
+  let mdTree = await parseMarkdown(`${text}\n${footerText}`);
   const publishMd = await cleanMarkdown(
-    text,
+    mdTree,
     publishConfig,
     publishedPages,
     false
   );
-  const htmlMd = await cleanMarkdown(text, publishConfig, publishedPages, true);
+  const htmlMd = await cleanMarkdown(
+    mdTree,
+    publishConfig,
+    publishedPages,
+    true
+  );
+  let attachments = await collectAttachments(mdTree);
+  for (let attachment of attachments) {
+    try {
+      let result: any = await readAttachment(attachment);
+      console.log("Writing", `${destDir}/${attachment}`);
+      await writeFile(
+        `${destDir}/attachment/${attachment}`,
+        result.data,
+        "dataurl"
+      );
+    } catch (e: any) {
+      console.error("Error reading attachment", attachment, e.message);
+    }
+  }
   // Write .md file
   await writeFile(mdPath, publishMd);
   // Write .html file
@@ -91,27 +117,39 @@ export async function publishAll(destDir?: string) {
 
   allPages = [...allPageMap.values()];
   let publishedPages = new Set<string>();
-  for (let page of allPages) {
-    if (publishConfig.tags && page.tags) {
-      for (let tag of page.tags) {
-        if (publishConfig.tags.includes(tag)) {
-          publishedPages.add(page.name);
+  if (publishConfig.publishAll) {
+    publishedPages = new Set(allPages.map((p) => p.name));
+  } else {
+    for (let page of allPages) {
+      if (publishConfig.tags && page.tags) {
+        for (let tag of page.tags) {
+          if (publishConfig.tags.includes(tag)) {
+            publishedPages.add(page.name);
+          }
         }
       }
-    }
-    // Some sanity checking
-    if (typeof page.name !== "string") {
-      continue;
-    }
-    if (publishConfig.prefixes) {
-      for (let prefix of publishConfig.prefixes) {
-        if (page.name.startsWith(prefix)) {
-          publishedPages.add(page.name);
+      // Some sanity checking
+      if (typeof page.name !== "string") {
+        continue;
+      }
+      if (publishConfig.prefixes) {
+        for (let prefix of publishConfig.prefixes) {
+          if (page.name.startsWith(prefix)) {
+            publishedPages.add(page.name);
+          }
         }
       }
     }
   }
   console.log("Starting this thing", [...publishedPages]);
+
+  let footer = "";
+
+  if (publishConfig.footerPage) {
+    let { text } = await readPage(publishConfig.footerPage);
+    footer = text;
+  }
+
   const publishedPagesArray = [...publishedPages];
   for (let page of publishedPagesArray) {
     await generatePage(
@@ -119,7 +157,9 @@ export async function publishAll(destDir?: string) {
       `${destDir}/${page.replaceAll(" ", "_")}/index.html`,
       `${destDir}/${page}.md`,
       publishedPagesArray,
-      publishConfig
+      publishConfig,
+      destDir,
+      footer
     );
   }
 
@@ -130,7 +170,9 @@ export async function publishAll(destDir?: string) {
       `${destDir}/index.html`,
       `${destDir}/index.md`,
       publishedPagesArray,
-      publishConfig
+      publishConfig,
+      destDir,
+      footer
     );
   }
 }
@@ -145,25 +187,31 @@ export function encodePageUrl(name: string): string {
   return name.replaceAll(" ", "_");
 }
 
-export async function cleanMarkdown(
-  text: string,
+async function collectAttachments(tree: ParseTree) {
+  let attachments: string[] = [];
+  collectNodesOfType(tree, "URL").forEach((node) => {
+    let url = node.children![0].text!;
+    if (url.startsWith("attachment/")) {
+      attachments.push(url.substring("attachment/".length));
+    }
+  });
+  return attachments;
+}
+
+async function cleanMarkdown(
+  mdTree: ParseTree,
   publishConfig: PublishConfig,
   validPages: string[],
   translatePageReferences = true
 ): Promise<string> {
-  let mdTree = await parseMarkdown(text);
   replaceNodesMatching(mdTree, (n) => {
     if (n.type === "WikiLink") {
       const page = n.children![1].children![0].text!;
       if (!validPages.includes(page)) {
-        if (!publishConfig.removeUnpublishedLinks) {
-          // Replace with just page text
-          return {
-            text: `_${page}_`,
-          };
-        } else {
-          return null;
-        }
+        // Replace with just page text
+        return {
+          text: `_${page}_`,
+        };
       } else if (translatePageReferences) {
         return {
           text: `[${page}](/${encodePageUrl(page)})`,

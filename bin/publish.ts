@@ -35,6 +35,7 @@ import spaceSyscalls from "@silverbulletmd/server/syscalls/space";
 import { safeRun } from "@silverbulletmd/server/util";
 import { readFileSync } from "fs";
 import { mkdir, readdir, readFile } from "fs/promises";
+import { watch } from "fs";
 import knex from "knex";
 import path from "path";
 import yargs from "yargs";
@@ -54,6 +55,10 @@ let args = yargs(hideBin(process.argv))
     type: "boolean",
     default: false,
   })
+  .option("w", {
+    type: "boolean",
+    default: false,
+  })
   .option("o", {
     type: "string",
     default: "web",
@@ -62,7 +67,7 @@ let args = yargs(hideBin(process.argv))
 
 if (!args._.length) {
   console.error(
-    "Usage: @silverbulletmd/publish [--index] [-o <path>] <path-to-pages>"
+    "Usage: @silverbulletmd/publish [--index] [--all] [-o <path>] <path-to-pages>"
   );
   process.exit(1);
 }
@@ -165,8 +170,18 @@ async function main() {
   await mkdir(outputDir, { recursive: true });
 
   await publishPlug.invoke("publishAll", [outputDir]);
-  console.log("Done!");
-  process.exit(0);
+
+  if (args.w) {
+    console.log("Watching for changes");
+    watch(pagesPath, { recursive: true }, async () => {
+      console.log("Change detected, republishing");
+      await space.updatePageList();
+      await publishPlug.invoke("publishAll", [outputDir]);
+    });
+  } else {
+    console.log("Done!");
+    process.exit(0);
+  }
 }
 
 main().catch((e) => {

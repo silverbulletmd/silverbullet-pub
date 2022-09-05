@@ -43,3 +43,7 @@ blockquote {
   text-align: center;
   font-size: 70%;
 }
+
+img {
+  max-width: 90%;
+}
