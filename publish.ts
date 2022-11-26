@@ -1,24 +1,15 @@
-import { writeFile } from "@plugos/plugos-syscall/fs";
-import { invokeFunction } from "@silverbulletmd/plugos-silverbullet-syscall/system";
-import { queryPrefix } from "@silverbulletmd/plugos-silverbullet-syscall";
-import { flashNotification } from "@silverbulletmd/plugos-silverbullet-syscall/editor";
+import { asset, fs } from "$sb/plugos-syscall/mod.ts";
 import {
-  listPages,
-  readAttachment,
-  readPage,
-} from "@silverbulletmd/plugos-silverbullet-syscall/space";
-import { readYamlPage } from "@silverbulletmd/plugs/lib/yaml_page";
+  editor,
+  index,
+  markdown,
+  space,
+  system,
+} from "$sb/silverbullet-syscall/mod.ts";
+import { readYamlPage } from "$sb/lib/yaml_page.ts";
+import { renderMarkdownToHtml } from "../markdown/markdown_render.ts";
 
-import MarkdownIt from "markdown-it";
 import Handlebars from "handlebars";
-
-var taskLists = require("markdown-it-task-lists");
-
-// @ts-ignore
-import pageTemplate from "./page.hbs";
-// @ts-ignore
-import pageCSS from "./style.css";
-import { parseMarkdown } from "@silverbulletmd/plugos-silverbullet-syscall/markdown";
 
 import {
   collectNodesOfType,
@@ -26,7 +17,7 @@ import {
   ParseTree,
   renderToText,
   replaceNodesMatching,
-} from "@silverbulletmd/common/tree";
+} from "$sb/lib/tree.ts";
 
 type PublishConfig = {
   destDir?: string;
@@ -39,12 +30,6 @@ type PublishConfig = {
   footerPage?: string;
 };
 
-const md = new MarkdownIt({
-  linkify: true,
-  html: false,
-  typographer: true,
-}).use(taskLists);
-
 async function generatePage(
   pageName: string,
   htmlPath: string,
@@ -52,64 +37,58 @@ async function generatePage(
   publishedPages: string[],
   publishConfig: PublishConfig,
   destDir: string,
-  footerText: string
+  footerText: string,
 ) {
-  let { text } = await readPage(pageName);
-  let renderPage = Handlebars.compile(pageTemplate);
+  const pageTemplate = await asset.readAsset("assets/page.hbs");
+  const pageCSS = await asset.readAsset("assets/style.css");
+  const text = await space.readPage(pageName);
+  const renderPage = Handlebars.compile(pageTemplate);
   console.log("Writing", pageName);
-  let mdTree = await parseMarkdown(`${text}\n${footerText}`);
-  const publishMd = await cleanMarkdown(
+  const mdTree = await markdown.parseMarkdown(`${text}\n${footerText}`);
+  const publishMd = cleanMarkdown(
     mdTree,
     publishConfig,
     publishedPages,
-    false
   );
-  const htmlMd = await cleanMarkdown(
-    mdTree,
-    publishConfig,
-    publishedPages,
-    true
-  );
-  let attachments = await collectAttachments(mdTree);
-  for (let attachment of attachments) {
+  const attachments = await collectAttachments(mdTree);
+  for (const attachment of attachments) {
     try {
-      let result: any = await readAttachment(attachment);
+      const result = await space.readAttachment(attachment);
       console.log("Writing", `${destDir}/${attachment}`);
-      await writeFile(
-        `${destDir}/attachment/${attachment}`,
-        result.data,
-        "dataurl"
-      );
+      await fs.writeFile(`${destDir}/${attachment}`, result, "dataurl");
     } catch (e: any) {
       console.error("Error reading attachment", attachment, e.message);
     }
   }
   // Write .md file
-  await writeFile(mdPath, publishMd);
+  await fs.writeFile(mdPath, publishMd);
   // Write .html file
-  await writeFile(
+  await fs.writeFile(
     htmlPath,
     renderPage({
       pageName,
       config: publishConfig,
       css: pageCSS,
-      body: md.render(htmlMd),
-    })
+      body: renderMarkdownToHtml(mdTree, {
+        smartHardBreak: true,
+        attachmentUrlPrefix: "/",
+      }),
+    }),
   );
 }
 
 export async function publishAll(destDir?: string) {
-  let publishConfig: PublishConfig = await readYamlPage("PUBLISH");
+  const publishConfig: PublishConfig = await readYamlPage("PUBLISH");
   destDir = destDir || publishConfig.destDir || ".";
   console.log("Publishing to", destDir);
-  let allPages: any[] = await listPages();
+  let allPages: any[] = await space.listPages();
   let allPageMap: Map<string, any> = new Map(
-    allPages.map((pm) => [pm.name, pm])
+    allPages.map((pm) => [pm.name, pm]),
   );
-  for (let { page, value } of await queryPrefix("meta:")) {
-    let p = allPageMap.get(page);
+  for (const { page, value } of await index.queryPrefix("meta:")) {
+    const p = allPageMap.get(page);
     if (p) {
-      for (let [k, v] of Object.entries(value)) {
+      for (const [k, v] of Object.entries(value)) {
         p[k] = v;
       }
     }
@@ -120,9 +99,9 @@ export async function publishAll(destDir?: string) {
   if (publishConfig.publishAll) {
     publishedPages = new Set(allPages.map((p) => p.name));
   } else {
-    for (let page of allPages) {
+    for (const page of allPages) {
       if (publishConfig.tags && page.tags) {
-        for (let tag of page.tags) {
+        for (const tag of page.tags) {
           if (publishConfig.tags.includes(tag)) {
             publishedPages.add(page.name);
           }
@@ -133,7 +112,7 @@ export async function publishAll(destDir?: string) {
         continue;
       }
       if (publishConfig.prefixes) {
-        for (let prefix of publishConfig.prefixes) {
+        for (const prefix of publishConfig.prefixes) {
           if (page.name.startsWith(prefix)) {
             publishedPages.add(page.name);
           }
@@ -146,12 +125,11 @@ export async function publishAll(destDir?: string) {
   let footer = "";
 
   if (publishConfig.footerPage) {
-    let { text } = await readPage(publishConfig.footerPage);
-    footer = text;
+    footer = await space.readPage(publishConfig.footerPage);
   }
 
   const publishedPagesArray = [...publishedPages];
-  for (let page of publishedPagesArray) {
+  for (const page of publishedPagesArray) {
     await generatePage(
       page,
       `${destDir}/${page.replaceAll(" ", "_")}/index.html`,
@@ -159,7 +137,7 @@ export async function publishAll(destDir?: string) {
       publishedPagesArray,
       publishConfig,
       destDir,
-      footer
+      footer,
     );
   }
 
@@ -172,15 +150,15 @@ export async function publishAll(destDir?: string) {
       publishedPagesArray,
       publishConfig,
       destDir,
-      footer
+      footer,
     );
   }
 }
 
 export async function publishAllCommand() {
-  await flashNotification("Publishing...");
-  await await invokeFunction("server", "publishAll");
-  await flashNotification("Done!");
+  await editor.flashNotification("Publishing...");
+  await await system.invokeFunction("server", "publishAll");
+  await editor.flashNotification("Done!");
 }
 
 export function encodePageUrl(name: string): string {
@@ -188,33 +166,31 @@ export function encodePageUrl(name: string): string {
 }
 
 async function collectAttachments(tree: ParseTree) {
-  let attachments: string[] = [];
+  const attachments: string[] = [];
   collectNodesOfType(tree, "URL").forEach((node) => {
     let url = node.children![0].text!;
-    if (url.startsWith("attachment/")) {
-      attachments.push(url.substring("attachment/".length));
+    if (url.indexOf("://") === -1) {
+      attachments.push(url);
     }
   });
   return attachments;
 }
 
-async function cleanMarkdown(
+function cleanMarkdown(
   mdTree: ParseTree,
   publishConfig: PublishConfig,
   validPages: string[],
-  translatePageReferences = true
-): Promise<string> {
+): string {
   replaceNodesMatching(mdTree, (n) => {
     if (n.type === "WikiLink") {
-      const page = n.children![1].children![0].text!;
+      let page = n.children![1].children![0].text!;
+      if (page.includes("@")) {
+        page = page.split("@")[0];
+      }
       if (!validPages.includes(page)) {
         // Replace with just page text
         return {
           text: `_${page}_`,
-        };
-      } else if (translatePageReferences) {
-        return {
-          text: `[${page}](/${encodePageUrl(page)})`,
         };
       }
     }
@@ -223,20 +199,7 @@ async function cleanMarkdown(
       return null;
     }
     if (n.type === "Hashtag") {
-      if (!publishConfig.removeHashtags) {
-        return {
-          text: `__${n.children![0].text}__`,
-        };
-      } else {
-        return null;
-      }
-    }
-    if (n.type === "FencedCode") {
-      let codeInfoNode = findNodeOfType(n, "CodeInfo");
-      if (!codeInfoNode) {
-        return;
-      }
-      if (codeInfoNode.children![0].text === "meta") {
+      if (publishConfig.removeHashtags) {
         return null;
       }
     }

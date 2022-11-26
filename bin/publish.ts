@@ -1,190 +1,154 @@
 #!/usr/bin/env node
 import {
   createSandbox,
-  nodeModulesDir,
-} from "@plugos/plugos/environments/node_sandbox";
-import { EventHook } from "@plugos/plugos/hooks/event";
-import { eventSyscalls } from "@plugos/plugos/syscalls/event";
-import fileSystemSyscalls from "@plugos/plugos/syscalls/fs.node";
+} from "$silverbullet/plugos/environments/deno_sandbox.ts";
+import { EventHook } from "$silverbullet/plugos/hooks/event.ts";
+import { eventSyscalls } from "$silverbullet/plugos/syscalls/event.ts";
+import fileSystemSyscalls from "$silverbullet/plugos/syscalls/fs.deno.ts";
 import {
   ensureFTSTable,
   fullTextSearchSyscalls,
-} from "@plugos/plugos/syscalls/fulltext.knex_sqlite";
-import { jwtSyscalls } from "@plugos/plugos/syscalls/jwt";
-import sandboxSyscalls from "@plugos/plugos/syscalls/sandbox";
-import shellSyscalls from "@plugos/plugos/syscalls/shell.node";
+} from "$silverbullet/plugos/syscalls/fulltext.sqlite.ts";
+import sandboxSyscalls from "$silverbullet/plugos/syscalls/sandbox.ts";
+import shellSyscalls from "$silverbullet/plugos/syscalls/shell.deno.ts";
 import {
   ensureTable as ensureStoreTable,
   storeSyscalls,
-} from "@plugos/plugos/syscalls/store.knex_node";
-import { System } from "@plugos/plugos/system";
-import { Manifest, SilverBulletHooks } from "@silverbulletmd/common/manifest";
-import { loadMarkdownExtensions } from "@silverbulletmd/common/markdown_ext";
-import buildMarkdown from "@silverbulletmd/common/parser";
-import { DiskSpacePrimitives } from "@silverbulletmd/common/spaces/disk_space_primitives";
-import { EventedSpacePrimitives } from "@silverbulletmd/common/spaces/evented_space_primitives";
-import { Space } from "@silverbulletmd/common/spaces/space";
-import { markdownSyscalls } from "@silverbulletmd/common/syscalls/markdown";
-import { PageNamespaceHook } from "@silverbulletmd/server/hooks/page_namespace";
-import { PlugSpacePrimitives } from "@silverbulletmd/server/hooks/plug_space_primitives";
+} from "$silverbullet/plugos/syscalls/store.deno.ts";
+import { System } from "$silverbullet/plugos/system.ts";
+import { Manifest, SilverBulletHooks } from "$silverbullet/common/manifest.ts";
+import { loadMarkdownExtensions } from "$silverbullet/common/markdown_ext.ts";
+import buildMarkdown from "$silverbullet/common/parser.ts";
+import { DiskSpacePrimitives } from "$silverbullet/common/spaces/disk_space_primitives.ts";
+import { EventedSpacePrimitives } from "$silverbullet/common/spaces/evented_space_primitives.ts";
+import { Space } from "$silverbullet/common/spaces/space.ts";
+import { markdownSyscalls } from "$silverbullet/common/syscalls/markdown.ts";
+import { PageNamespaceHook } from "$silverbullet/server/hooks/page_namespace.ts";
+import { PlugSpacePrimitives } from "$silverbullet/server/hooks/plug_space_primitives.ts";
 import {
   ensureTable as ensureIndexTable,
   pageIndexSyscalls,
-} from "@silverbulletmd/server/syscalls";
-import spaceSyscalls from "@silverbulletmd/server/syscalls/space";
-import { safeRun } from "@silverbulletmd/server/util";
-import { readFileSync } from "fs";
-import { mkdir, readdir, readFile } from "fs/promises";
-import { watch } from "fs";
-import knex from "knex";
-import path from "path";
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
+} from "$silverbullet/server/syscalls/index.ts";
+import spaceSyscalls from "$silverbullet/server/syscalls/space.ts";
 
-import publishPlugManifest from "../dist/publish.plug.json";
+import { Command } from "https://deno.land/x/cliffy@v0.25.2/command/command.ts";
 
-const globalModules: any = JSON.parse(
-  readFileSync(
-    nodeModulesDir + "/node_modules/@silverbulletmd/web/dist/global.plug.json",
-    "utf-8"
-  )
-);
+import globalModules from "https://get.silverbullet.md/global.plug.json" assert {
+  type: "json",
+};
 
-let args = yargs(hideBin(process.argv))
-  .option("index", {
-    type: "boolean",
-    default: false,
-  })
-  .option("w", {
-    type: "boolean",
-    default: false,
-  })
-  .option("o", {
-    type: "string",
-    default: "web",
-  })
-  .parse();
+import publishPlugManifest from "../publish.plug.json" assert { type: "json" };
+import * as path from "https://deno.land/std@0.159.0/path/mod.ts";
+import { AsyncSQLite } from "../../silverbullet/plugos/sqlite/async_sqlite.ts";
 
-if (!args._.length) {
-  console.error(
-    "Usage: @silverbulletmd/publish [--index] [--all] [-o <path>] <path-to-pages>"
-  );
-  process.exit(1);
-}
+await new Command()
+  .name("silverbullet-publish")
+  .description("Publish a SilverBullet site")
+  .arguments("<folder:string>")
+  .option("--index [type:boolean]", "Index space first", { default: false })
+  .option("--watch, -w [type:boolean]", "Watch for changes", { default: false })
+  .option("-o <path:string>", "Output directory", { default: "web" })
+  .action(async (options, pagesPath) => {
+    // Set up the PlugOS System
+    const system = new System<SilverBulletHooks>("server");
 
-const pagesPath = path.resolve(args._[0] as string);
+    // Instantiate the event bus hook
+    const eventHook = new EventHook();
+    system.addHook(eventHook);
 
-console.log("Pages path", pagesPath);
+    // And the page namespace hook
+    const namespaceHook = new PageNamespaceHook();
+    system.addHook(namespaceHook);
 
-async function main() {
-  // Set up the PlugOS System
-  const system = new System<SilverBulletHooks>("server");
+    pagesPath = path.resolve(pagesPath);
 
-  // Instantiate the event bus hook
-  const eventHook = new EventHook();
-  system.addHook(eventHook);
-
-  // And the page namespace hook
-  const namespaceHook = new PageNamespaceHook();
-  system.addHook(namespaceHook);
-
-  // The space
-  const space = new Space(
-    new EventedSpacePrimitives(
-      new PlugSpacePrimitives(
-        new DiskSpacePrimitives(pagesPath),
-        namespaceHook
+    // The space
+    const space = new Space(
+      new EventedSpacePrimitives(
+        new PlugSpacePrimitives(
+          new DiskSpacePrimitives(pagesPath),
+          namespaceHook,
+        ),
+        eventHook,
       ),
-      eventHook
-    ),
-    true
-  );
+    );
 
-  await space.updatePageList();
+    await space.updatePageList();
 
-  // The database used for persistence (SQLite)
-  const db = knex({
-    client: "better-sqlite3",
-    connection: {
-      filename: path.resolve(pagesPath, "data.db"),
-    },
-    useNullAsDefault: true,
-  });
-
-  // Register syscalls available on the server side
-  system.registerSyscalls(
-    [],
-    pageIndexSyscalls(db),
-    storeSyscalls(db, "store"),
-    fullTextSearchSyscalls(db, "fts"),
-    spaceSyscalls(space),
-    eventSyscalls(eventHook),
-    markdownSyscalls(buildMarkdown([])),
-    sandboxSyscalls(system),
-    jwtSyscalls()
-  );
-  // Danger zone
-  system.registerSyscalls(["shell"], shellSyscalls(pagesPath));
-  system.registerSyscalls(["fs"], fileSystemSyscalls("/"));
-
-  system.on({
-    plugLoaded: (plug) => {
-      // Automatically inject some modules into each plug
-      safeRun(async () => {
-        for (let [modName, code] of Object.entries(
-          globalModules.dependencies
-        )) {
-          await plug.sandbox.loadDependency(modName, code as string);
-        }
-      });
-    },
-  });
-
-  const plugDir = nodeModulesDir + "/node_modules/@silverbulletmd/plugs/dist";
-  for (let file of await readdir(plugDir)) {
-    if (file.endsWith(".plug.json")) {
-      let manifestJson = await readFile(path.join(plugDir, file), "utf8");
-      let manifest: Manifest = JSON.parse(manifestJson);
-      await system.load(manifest, createSandbox);
-    }
-  }
-
-  let publishPlug = await system.load(publishPlugManifest, createSandbox);
-
-  system.registerSyscalls(
-    [],
-    markdownSyscalls(buildMarkdown(loadMarkdownExtensions(system)))
-  );
-
-  await ensureIndexTable(db);
-  await ensureStoreTable(db, "store");
-  await ensureFTSTable(db, "fts");
-
-  if (args.index) {
-    console.log("Now indexing space");
-    await system.loadedPlugs.get("core")?.invoke("reindexSpace", []);
-  }
-
-  const outputDir = path.resolve(args.o);
-
-  await mkdir(outputDir, { recursive: true });
-
-  await publishPlug.invoke("publishAll", [outputDir]);
-
-  if (args.w) {
-    console.log("Watching for changes");
-    watch(pagesPath, { recursive: true }, async () => {
-      console.log("Change detected, republishing");
-      await space.updatePageList();
-      await publishPlug.invoke("publishAll", [outputDir]);
+    // The database used for persistence (SQLite)
+    const db = new AsyncSQLite(path.join(pagesPath, "publish-data.db"));
+    db.init().catch((e) => {
+      console.error("Error initializing database", e);
     });
-  } else {
-    console.log("Done!");
-    process.exit(0);
-  }
-}
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+    // Register syscalls available on the server side
+    system.registerSyscalls(
+      [],
+      pageIndexSyscalls(db),
+      storeSyscalls(db, "store"),
+      fullTextSearchSyscalls(db, "fts"),
+      spaceSyscalls(space),
+      eventSyscalls(eventHook),
+      markdownSyscalls(buildMarkdown([])),
+      sandboxSyscalls(system),
+    );
+    // Danger zone
+    system.registerSyscalls(["shell"], shellSyscalls(pagesPath));
+    system.registerSyscalls(["fs"], fileSystemSyscalls("/"));
+
+    system.on({
+      sandboxInitialized: async (sandbox) => {
+        for (
+          const [modName, code] of Object.entries(
+            globalModules.dependencies,
+          )
+        ) {
+          await sandbox.loadDependency(modName, code as string);
+        }
+      },
+    });
+
+    const plugDir = nodeModulesDir + "/node_modules/$silverbullet/plugs/dist";
+    for (let file of await readdir(plugDir)) {
+      if (file.endsWith(".plug.json")) {
+        let manifestJson = await readFile(path.join(plugDir, file), "utf8");
+        let manifest: Manifest = JSON.parse(manifestJson);
+        await system.load(manifest, createSandbox);
+      }
+    }
+
+    let publishPlug = await system.load(publishPlugManifest, createSandbox);
+
+    system.registerSyscalls(
+      [],
+      markdownSyscalls(buildMarkdown(loadMarkdownExtensions(system))),
+    );
+
+    await ensureIndexTable(db);
+    await ensureStoreTable(db, "store");
+    await ensureFTSTable(db, "fts");
+
+    if (args.index) {
+      console.log("Now indexing space");
+      await system.loadedPlugs.get("core")?.invoke("reindexSpace", []);
+    }
+
+    const outputDir = path.resolve(args.o);
+
+    await mkdir(outputDir, { recursive: true });
+
+    await publishPlug.invoke("publishAll", [outputDir]);
+
+    if (args.w) {
+      console.log("Watching for changes");
+      watch(pagesPath, { recursive: true }, async () => {
+        console.log("Change detected, republishing");
+        await space.updatePageList();
+        await publishPlug.invoke("publishAll", [outputDir]);
+      });
+    } else {
+      console.log("Done!");
+      process.exit(0);
+    }
+  })
+  .parse(Deno.args);

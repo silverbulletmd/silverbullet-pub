@@ -1,6 +1,10 @@
 name: publish
+imports:
+  - https://get.silverbullet.md/global.plug.json
 requiredPermissions:
   - fs
+assets:
+  - "assets/*"
 functions:
   publishAll:
     path: "./publish.ts:publishAll"
