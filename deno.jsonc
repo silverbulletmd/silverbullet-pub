@@ -2,8 +2,7 @@
   "importMap": "import_map.json",
   "tasks": {
     "build": "silverbullet plug:compile --importmap import_map.json publish.plug.yaml",
-    "dev": "silverbullet plug:compile -w --importmap import_map.json --dist _plug publish.plug.yaml",
-    "dev:test": "silverbullet plug:compile --importmap import_map.json --dist _plug publish.plug.yaml && silverbullet plug:run . publish.publishAll"
+    "pub": "deno task build && silverbullet plug:run . publish.publishAll"
   },
   "lint": {
     "rules": {

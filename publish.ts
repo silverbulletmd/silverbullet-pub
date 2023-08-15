@@ -64,6 +64,7 @@ async function generatePage(
     new TextEncoder().encode(template({
       pageName,
       config: publishConfig,
+      isIndex: pageName === publishConfig.indexPage,
       body: renderMarkdownToHtml(mdTree, {
         smartHardBreak: true,
         attachmentUrlPrefix: "/",

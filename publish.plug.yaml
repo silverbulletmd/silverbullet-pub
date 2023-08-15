@@ -2,9 +2,11 @@ name: publish
 assets:
   - "assets/*"
 functions:
+  # For use from the CLI
   publishAll:
     path: "./publish.ts:publishAll"
+
   publishAllCommand:
     path: "./publish.ts:publishAllCommand"
     command:
-      name: "Silver Bullet Publish: Publish All"
+      name: "Publish: Publish All"
