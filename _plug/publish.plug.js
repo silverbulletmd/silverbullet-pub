@@ -1,0 +1,1 @@
+../publish.plug.js
