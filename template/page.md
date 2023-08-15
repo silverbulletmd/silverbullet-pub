@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{#if pageName}}{{pageName}} — {{config.title}}{{else}}{{config.title}}{{/if}}</title>
+    <title>{{#unless isIndex}}{{pageName}} — {{config.title}}{{else}}{{config.title}}{{/unless}}</title>
     <style>
         body {
             font-family: georgia, times, serif;
@@ -54,6 +54,7 @@
            background-color: #f2eeee;
            border: 1px solid #cecece;
            padding: 5px;
+           overflow-x: scroll;
         }
 
         img {

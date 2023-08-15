@@ -1,6 +1,4 @@
 name: publish
-assets:
-  - "assets/*"
 functions:
   # For use from the CLI
   publishAll:

@@ -1,5 +1,5 @@
 import { asset } from "$sb/plugos-syscall/mod.ts";
-import { editor, markdown, space } from "$sb/silverbullet-syscall/mod.ts";
+import { editor, markdown, space, sync } from "$sb/silverbullet-syscall/mod.ts";
 import { readCodeBlockPage, readYamlPage } from "$sb/lib/yaml_page.ts";
 import { renderMarkdownToHtml } from "$silverbullet/plugs/markdown/markdown_render.ts";
 
@@ -12,6 +12,7 @@ import {
   replaceNodesMatching,
 } from "$sb/lib/tree.ts";
 import { FileMeta } from "$silverbullet/common/types.ts";
+import { parseMarkdown } from "$silverbullet/plug-api/silverbullet-syscall/markdown.ts";
 
 type PublishConfig = {
   title?: string;
@@ -27,6 +28,7 @@ type PublishConfig = {
 const defaultPublishConfig: PublishConfig = {
   removeHashtags: true,
   generateIndexJson: true,
+  template: "!publish.silverbullet.md/template/page",
 };
 
 async function generatePage(
@@ -46,6 +48,7 @@ async function generatePage(
     publishConfig,
     publishedPages,
   );
+  // console.log("CLean md", publishMd)
   const attachments = collectAttachments(mdTree);
   for (const attachment of attachments) {
     try {
@@ -65,7 +68,7 @@ async function generatePage(
       pageName,
       config: publishConfig,
       isIndex: pageName === publishConfig.indexPage,
-      body: renderMarkdownToHtml(mdTree, {
+      body: renderMarkdownToHtml(await parseMarkdown(publishMd), {
         smartHardBreak: true,
         attachmentUrlPrefix: "/",
       }),
@@ -97,8 +100,6 @@ export async function publishAll() {
       await space.deleteAttachment(attachment.name);
     }
   }
-
-  console.log(allPageMap);
 
   allPages = [...allPageMap.values()];
   let publishedPages = new Set<string>();
@@ -135,12 +136,9 @@ export async function publishAll() {
       }
     }
   }
-  console.log("Starting this thing", [...publishedPages]);
+  console.log("Publishing", [...publishedPages]);
 
-  let pageTemplate = await asset.readAsset("assets/template.hbs")!;
-  if (publishConfig.template) {
-    pageTemplate = (await readCodeBlockPage(publishConfig.template))!;
-  }
+  const pageTemplate = await readCodeBlockPage(publishConfig.template!);
   const template = Handlebars.compile(pageTemplate);
 
   const publishedPagesArray = [...publishedPages];
@@ -170,7 +168,7 @@ export async function publishAll() {
   }
 
   if (publishConfig.generateIndexJson) {
-    console.log("Writing", `${destDir}/index.json`);
+    console.log("Writing", `index.json`);
     const publishedFiles: FileMeta[] = [];
     for (
       const { name, size, contentType, lastModified } of await space
@@ -202,6 +200,7 @@ export async function publishAll() {
 export async function publishAllCommand() {
   await editor.flashNotification("Publishing...");
   await publishAll();
+  await sync.scheduleSpaceSync();
   await editor.flashNotification("Done!");
 }
 
@@ -226,6 +225,12 @@ function cleanMarkdown(
       let page = n.children![1].children![0].text!;
       if (page.includes("@")) {
         page = page.split("@")[0];
+      }
+      if (page.startsWith("!")) {
+        const lastBit = page.split("/").pop();
+        return {
+          text: `[${lastBit}](https://${page.slice(1)})`,
+        };
       }
       if (!validPages.includes(page)) {
         // Replace with just page text
