@@ -1,33 +1,32 @@
-import { asset, fs } from "$sb/plugos-syscall/mod.ts";
-import {
-  editor,
-  index,
-  markdown,
-  space,
-  system,
-} from "$sb/silverbullet-syscall/mod.ts";
-import { readYamlPage } from "$sb/lib/yaml_page.ts";
-import { renderMarkdownToHtml } from "../markdown/markdown_render.ts";
+import { asset } from "$sb/plugos-syscall/mod.ts";
+import { editor, markdown, space } from "$sb/silverbullet-syscall/mod.ts";
+import { readCodeBlockPage, readYamlPage } from "$sb/lib/yaml_page.ts";
+import { renderMarkdownToHtml } from "$silverbullet/plugs/markdown/markdown_render.ts";
 
 import Handlebars from "handlebars";
 
 import {
   collectNodesOfType,
-  findNodeOfType,
   ParseTree,
   renderToText,
   replaceNodesMatching,
 } from "$sb/lib/tree.ts";
+import { FileMeta } from "$silverbullet/common/types.ts";
 
 type PublishConfig = {
-  destDir?: string;
   title?: string;
   indexPage?: string;
   removeHashtags?: boolean;
   publishAll?: boolean;
   tags?: string[];
   prefixes?: string[];
-  footerPage?: string;
+  template?: string;
+  generateIndexJson?: boolean;
+};
+
+const defaultPublishConfig: PublishConfig = {
+  removeHashtags: true,
+  generateIndexJson: true,
 };
 
 async function generatePage(
@@ -37,62 +36,68 @@ async function generatePage(
   publishedPages: string[],
   publishConfig: PublishConfig,
   destDir: string,
-  footerText: string,
+  template: Handlebars.TemplateDelegate<any>,
 ) {
-  const pageTemplate = await asset.readAsset("assets/page.hbs");
-  const pageCSS = await asset.readAsset("assets/style.css");
   const text = await space.readPage(pageName);
-  const renderPage = Handlebars.compile(pageTemplate);
   console.log("Writing", pageName);
-  const mdTree = await markdown.parseMarkdown(`${text}\n${footerText}`);
+  const mdTree = await markdown.parseMarkdown(text);
   const publishMd = cleanMarkdown(
     mdTree,
     publishConfig,
     publishedPages,
   );
-  const attachments = await collectAttachments(mdTree);
+  const attachments = collectAttachments(mdTree);
   for (const attachment of attachments) {
     try {
-      const result = await space.readAttachment(attachment);
+      const attachmentData = await space.readAttachment(attachment);
       console.log("Writing", `${destDir}/${attachment}`);
-      await fs.writeFile(`${destDir}/${attachment}`, result, "dataurl");
+      await space.writeAttachment(`${destDir}/${attachment}`, attachmentData);
     } catch (e: any) {
       console.error("Error reading attachment", attachment, e.message);
     }
   }
   // Write .md file
-  await fs.writeFile(mdPath, publishMd);
+  await space.writeAttachment(mdPath, new TextEncoder().encode(publishMd));
   // Write .html file
-  await fs.writeFile(
+  await space.writeAttachment(
     htmlPath,
-    renderPage({
+    new TextEncoder().encode(template({
       pageName,
       config: publishConfig,
-      css: pageCSS,
       body: renderMarkdownToHtml(mdTree, {
         smartHardBreak: true,
         attachmentUrlPrefix: "/",
       }),
-    }),
+    })),
   );
 }
 
-export async function publishAll(destDir?: string) {
-  const publishConfig: PublishConfig = await readYamlPage("PUBLISH");
-  destDir = destDir || publishConfig.destDir || ".";
+export async function publishAll() {
+  let publishConfig = defaultPublishConfig;
+  try {
+    const loadedPublishConfig: PublishConfig = await readYamlPage("PUBLISH");
+    publishConfig = {
+      ...publishConfig,
+      ...loadedPublishConfig,
+    };
+  } catch (e: any) {
+    console.warn("No PUBLISH page found, using defaults", e.message);
+  }
+  const destDir = "_public";
   console.log("Publishing to", destDir);
-  let allPages: any[] = await space.listPages();
-  let allPageMap: Map<string, any> = new Map(
+  let allPages = await space.listPages();
+  const allPageMap: Map<string, any> = new Map(
     allPages.map((pm) => [pm.name, pm]),
   );
-  for (const { page, value } of await index.queryPrefix("meta:")) {
-    const p = allPageMap.get(page);
-    if (p) {
-      for (const [k, v] of Object.entries(value)) {
-        p[k] = v;
-      }
+
+  console.log("Cleaning up destination directory");
+  for (const attachment of await space.listAttachments()) {
+    if (attachment.name.startsWith(destDir)) {
+      await space.deleteAttachment(attachment.name);
     }
   }
+
+  console.log(allPageMap);
 
   allPages = [...allPageMap.values()];
   let publishedPages = new Set<string>();
@@ -118,26 +123,35 @@ export async function publishAll(destDir?: string) {
           }
         }
       }
+
+      if (page.$share) {
+        if (!Array.isArray(page.$share)) {
+          page.$share = [page.$share];
+        }
+        if (page.$share.includes("pub")) {
+          publishedPages.add(page.name);
+        }
+      }
     }
   }
   console.log("Starting this thing", [...publishedPages]);
 
-  let footer = "";
-
-  if (publishConfig.footerPage) {
-    footer = await space.readPage(publishConfig.footerPage);
+  let pageTemplate = await asset.readAsset("assets/template.hbs")!;
+  if (publishConfig.template) {
+    pageTemplate = (await readCodeBlockPage(publishConfig.template))!;
   }
+  const template = Handlebars.compile(pageTemplate);
 
   const publishedPagesArray = [...publishedPages];
   for (const page of publishedPagesArray) {
     await generatePage(
       page,
-      `${destDir}/${page.replaceAll(" ", "_")}/index.html`,
+      `${destDir}/${page}/index.html`,
       `${destDir}/${page}.md`,
       publishedPagesArray,
       publishConfig,
       destDir,
-      footer,
+      template,
     );
   }
 
@@ -150,25 +164,50 @@ export async function publishAll(destDir?: string) {
       publishedPagesArray,
       publishConfig,
       destDir,
-      footer,
+      template,
+    );
+  }
+
+  if (publishConfig.generateIndexJson) {
+    console.log("Writing", `${destDir}/index.json`);
+    const publishedFiles: FileMeta[] = [];
+    for (
+      const { name, size, contentType, lastModified } of await space
+        .listAttachments()
+    ) {
+      if (name.startsWith(destDir)) {
+        if (contentType === "text/html") {
+          // Skip the generated HTML files
+          continue;
+        }
+        publishedFiles.push({
+          name: name.slice(destDir.length + 1),
+          size,
+          contentType,
+          lastModified,
+          perm: "ro",
+        });
+      }
+    }
+    await space.writeAttachment(
+      `${destDir}/index.json`,
+      new TextEncoder().encode(
+        JSON.stringify(publishedFiles, null, 2),
+      ),
     );
   }
 }
 
 export async function publishAllCommand() {
   await editor.flashNotification("Publishing...");
-  await await system.invokeFunction("server", "publishAll");
+  await publishAll();
   await editor.flashNotification("Done!");
 }
 
-export function encodePageUrl(name: string): string {
-  return name.replaceAll(" ", "_");
-}
-
-async function collectAttachments(tree: ParseTree) {
+function collectAttachments(tree: ParseTree) {
   const attachments: string[] = [];
   collectNodesOfType(tree, "URL").forEach((node) => {
-    let url = node.children![0].text!;
+    const url = node.children![0].text!;
     if (url.indexOf("://") === -1) {
       attachments.push(url);
     }

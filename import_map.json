@@ -2,7 +2,6 @@
   "imports": {
     "$sb/": "../silverbullet/plug-api/",
     "$silverbullet/": "../silverbullet/",
-    "yaml": "https://deno.land/std/encoding/yaml.ts",
-    "handlebars": "https://esm.sh/handlebars"
+    "handlebars": "https://esm.sh/handlebars@4.7.7?target=es2022"
   }
 }
