@@ -1,5 +1,5 @@
 # Silver Bullet Publish
-SilverBullet is a simple tool to publish a a subset of your [SilverBullet](https://silverbullet.md) space as a static website.
+SilverBullet is a simple tool to publish a a subset of your [SilverBullet](https://silverbullet.md) space as a static website. This repository is published to [publish.silverbullet.md](https://publish.silverbullet.md) using _Publish_ combined with [Netlify](https://netlify.com/).
 
 **Note:** this is still experimental, use at your own risk.
 
@@ -34,3 +34,6 @@ First make sure you have the `silverbullet-publish` plug installed into your spa
 ```bash
 silverbullet plug:run <<path-to-your-space>> publish.publishAll
 ```
+
+## Deploying with Netlify
+Check the [Github repo](https://github.com/silverbulletmd/silverbullet-publish) for this project for an example (see the `netlify.toml` file as a starting point)

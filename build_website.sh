@@ -9,3 +9,4 @@ if [ "$1" != "local" ]; then
 fi
 
 deno task pub
+cp _headers _public/
