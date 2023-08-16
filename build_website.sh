@@ -8,5 +8,5 @@ if [ "$1" != "local" ]; then
     deno install -f --name silverbullet --unstable -A https://silverbullet.md/silverbullet.js
 fi
 
-silverbullet plug:run . publish.publishAll
+silverbullet plug:run . pub.publishAll
 cp _headers _public/
