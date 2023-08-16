@@ -1,6 +1,5 @@
 # Silver Bullet Pub
-SilverBullet Pub is a simple tool to _publish_ a a subset of your [SilverBullet](https://silverbullet.md) space as a static website. This repository itself is published to [pub.silverbullet.md](https://publish.silverbullet.md) using _Pub_ combined with [Netlify](https://netlify.com/).
-
+SilverBullet Pub is a simple tool to publish a a subset of your [SilverBullet](https://silverbullet.md) space as a static website. 
 **Note:** this is still experimental, use at your own risk.
 
 SilverBullet Pub publishes a subset of a space in two formats:
@@ -13,7 +12,9 @@ The tool can be run in two ways:
 1. From the SB UI, via the (via the {[Pub: Publish All]} command)
 2. As a stand-alone CLI tool (see below)
 
-The latter allows for automatic deployments to e.g. environments like Netlify.
+After running the _Publish All_ command (from SB, or via the CLI as described below) the resulting website is written into your space folder under `_public` by default (but this is configurable). Note that because SilverBullet does not list pages starting with `_`, this folder will not be visible in the SilverBullet page picker, it’s only visible on disk.
+
+After this, it’s up to you to deploy these files to any host capable of statically serving files. This repository itself is published to [pub.silverbullet.md](https://publish.silverbullet.md) using _Pub_ combined with [Netlify](https://netlify.com/). [Check the repo](https://github.com/silverbulletmd/silverbullet-pub/blob/main/netlify.toml) to see how this works.
 
 ## Installation
 
@@ -35,5 +36,8 @@ First make sure you have the plug installed into your space. Then, from the comm
 silverbullet plug:run <<path-to-your-space>> pub.publishAll
 ```
 
-## Deploying with Netlify
-Check the [Github repo](https://github.com/silverbulletmd/silverbullet-pub) for this project for an example (see the `netlify.toml` file as a starting point)
+## Roadmap
+This version of SilverBullet Pub is very much an MVP. Some topics for future development:
+
+* [ ] More flexibility in building and sharing templates
+* [ ] Introduce a “pub server” that can be self-hosted somewhere (docker container, or Deno Deploy) that this plug can publish directly to (with a basic authentication system).
