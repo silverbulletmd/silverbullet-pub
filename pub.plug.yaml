@@ -1,10 +1,11 @@
-name: publish
+name: pub
 functions:
   # For use from the CLI
   publishAll:
     path: "./publish.ts:publishAll"
 
+  # For use from the UI
   publishAllCommand:
     path: "./publish.ts:publishAllCommand"
     command:
-      name: "Publish: Publish All"
+      name: "Pub: Publish All"

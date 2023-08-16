@@ -1,6 +1,6 @@
-import { asset } from "$sb/plugos-syscall/mod.ts";
 import { editor, markdown, space, sync } from "$sb/silverbullet-syscall/mod.ts";
-import { readCodeBlockPage, readYamlPage } from "$sb/lib/yaml_page.ts";
+import { readCodeBlockPage } from "$sb/lib/yaml_page.ts";
+import { readSetting } from "$sb/lib/settings_page.ts";
 import { renderMarkdownToHtml } from "$silverbullet/plugs/markdown/markdown_render.ts";
 
 import Handlebars from "handlebars";
@@ -19,6 +19,7 @@ type PublishConfig = {
   indexPage?: string;
   removeHashtags?: boolean;
   publishAll?: boolean;
+  destPrefix?: string;
   tags?: string[];
   prefixes?: string[];
   template?: string;
@@ -29,6 +30,7 @@ const defaultPublishConfig: PublishConfig = {
   removeHashtags: true,
   generateIndexJson: true,
   template: "!publish.silverbullet.md/template/page",
+  destPrefix: "_public/",
 };
 
 async function generatePage(
@@ -53,8 +55,8 @@ async function generatePage(
   for (const attachment of attachments) {
     try {
       const attachmentData = await space.readAttachment(attachment);
-      console.log("Writing", `${destDir}/${attachment}`);
-      await space.writeAttachment(`${destDir}/${attachment}`, attachmentData);
+      console.log("Writing", `${destDir}${attachment}`);
+      await space.writeAttachment(`${destDir}${attachment}`, attachmentData);
     } catch (e: any) {
       console.error("Error reading attachment", attachment, e.message);
     }
@@ -79,16 +81,16 @@ async function generatePage(
 export async function publishAll() {
   let publishConfig = defaultPublishConfig;
   try {
-    const loadedPublishConfig: PublishConfig = await readYamlPage("PUBLISH");
+    const loadedPublishConfig: PublishConfig = await readSetting("publish", {});
     publishConfig = {
-      ...publishConfig,
+      ...defaultPublishConfig,
       ...loadedPublishConfig,
     };
   } catch (e: any) {
-    console.warn("No PUBLISH page found, using defaults", e.message);
+    console.warn("No SETTINGS page found, using defaults", e.message);
   }
-  const destDir = "_public";
-  console.log("Publishing to", destDir);
+  const destPrefix = publishConfig.destPrefix!;
+  console.log("Publishing to", destPrefix);
   let allPages = await space.listPages();
   const allPageMap: Map<string, any> = new Map(
     allPages.map((pm) => [pm.name, pm]),
@@ -96,7 +98,7 @@ export async function publishAll() {
 
   console.log("Cleaning up destination directory");
   for (const attachment of await space.listAttachments()) {
-    if (attachment.name.startsWith(destDir)) {
+    if (attachment.name.startsWith(destPrefix)) {
       await space.deleteAttachment(attachment.name);
     }
   }
@@ -145,11 +147,11 @@ export async function publishAll() {
   for (const page of publishedPagesArray) {
     await generatePage(
       page,
-      `${destDir}/${page}/index.html`,
-      `${destDir}/${page}.md`,
+      `${destPrefix}${page}/index.html`,
+      `${destPrefix}${page}.md`,
       publishedPagesArray,
       publishConfig,
-      destDir,
+      destPrefix,
       template,
     );
   }
@@ -158,11 +160,11 @@ export async function publishAll() {
     console.log("Writing", publishConfig.indexPage);
     await generatePage(
       publishConfig.indexPage,
-      `${destDir}/index.html`,
-      `${destDir}/index.md`,
+      `${destPrefix}index.html`,
+      `${destPrefix}index.md`,
       publishedPagesArray,
       publishConfig,
-      destDir,
+      destPrefix,
       template,
     );
   }
@@ -174,13 +176,13 @@ export async function publishAll() {
       const { name, size, contentType, lastModified } of await space
         .listAttachments()
     ) {
-      if (name.startsWith(destDir)) {
+      if (name.startsWith(destPrefix)) {
         if (contentType === "text/html") {
           // Skip the generated HTML files
           continue;
         }
         publishedFiles.push({
-          name: name.slice(destDir.length + 1),
+          name: name.slice(destPrefix.length + 1),
           size,
           contentType,
           lastModified,
@@ -189,7 +191,7 @@ export async function publishAll() {
       }
     }
     await space.writeAttachment(
-      `${destDir}/index.json`,
+      `${destPrefix}index.json`,
       new TextEncoder().encode(
         JSON.stringify(publishedFiles, null, 2),
       ),
