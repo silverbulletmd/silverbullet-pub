@@ -23,13 +23,11 @@ type PublishConfig = {
   tags?: string[];
   prefixes?: string[];
   template?: string;
-  generateIndexJson?: boolean;
 };
 
 const defaultPublishConfig: PublishConfig = {
   removeHashtags: true,
-  generateIndexJson: true,
-  template: "!publish.silverbullet.md/template/page",
+  template: "!pub.silverbullet.md/template/page",
   destPrefix: "_public/",
 };
 
@@ -169,34 +167,32 @@ export async function publishAll() {
     );
   }
 
-  if (publishConfig.generateIndexJson) {
-    console.log("Writing", `index.json`);
-    const publishedFiles: FileMeta[] = [];
-    for (
-      const { name, size, contentType, lastModified } of await space
-        .listAttachments()
-    ) {
-      if (name.startsWith(destPrefix)) {
-        if (contentType === "text/html") {
-          // Skip the generated HTML files
-          continue;
-        }
-        publishedFiles.push({
-          name: name.slice(destPrefix.length),
-          size,
-          contentType,
-          lastModified,
-          perm: "ro",
-        });
+  console.log("Writing", `index.json`);
+  const publishedFiles: FileMeta[] = [];
+  for (
+    const { name, size, contentType, lastModified } of await space
+      .listAttachments()
+  ) {
+    if (name.startsWith(destPrefix)) {
+      if (contentType === "text/html") {
+        // Skip the generated HTML files
+        continue;
       }
+      publishedFiles.push({
+        name: name.slice(destPrefix.length),
+        size,
+        contentType,
+        lastModified,
+        perm: "ro",
+      });
     }
-    await space.writeAttachment(
-      `${destPrefix}index.json`,
-      new TextEncoder().encode(
-        JSON.stringify(publishedFiles, null, 2),
-      ),
-    );
   }
+  await space.writeAttachment(
+    `${destPrefix}index.json`,
+    new TextEncoder().encode(
+      JSON.stringify(publishedFiles, null, 2),
+    ),
+  );
 }
 
 export async function publishAllCommand() {
