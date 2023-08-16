@@ -182,7 +182,7 @@ export async function publishAll() {
           continue;
         }
         publishedFiles.push({
-          name: name.slice(destPrefix.length + 1),
+          name: name.slice(destPrefix.length),
           size,
           contentType,
           lastModified,
