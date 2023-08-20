@@ -8,6 +8,7 @@ publish:
   indexPage: README
   # Site title
   title: SilverBullet Publish
+  #publishServer: http://localhost:3333
   # Page containing the handlebars template to use to render pages
   # defaults to "!pub.silverbullet.md/template/page"
   template: template/page

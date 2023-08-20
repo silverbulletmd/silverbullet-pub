@@ -1,5 +1,6 @@
 import { editor, markdown, space, sync } from "$sb/silverbullet-syscall/mod.ts";
 import { readCodeBlockPage } from "$sb/lib/yaml_page.ts";
+import { readSecret } from "$sb/lib/secrets_page.ts";
 import { readSetting } from "$sb/lib/settings_page.ts";
 import { renderMarkdownToHtml } from "$silverbullet/plugs/markdown/markdown_render.ts";
 
@@ -11,8 +12,11 @@ import {
   renderToText,
   replaceNodesMatching,
 } from "$sb/lib/tree.ts";
-import { FileMeta } from "$silverbullet/common/types.ts";
 import { parseMarkdown } from "$silverbullet/plug-api/silverbullet-syscall/markdown.ts";
+import { FileMeta } from "$silverbullet/plug-api/types.ts";
+import { SpaceFilesystem } from "./space_fs.ts";
+import { HttpFilesystem } from "./http_fs.ts";
+import { Filesystem } from "./fs.ts";
 
 type PublishConfig = {
   title?: string;
@@ -20,6 +24,8 @@ type PublishConfig = {
   removeHashtags?: boolean;
   publishAll?: boolean;
   destPrefix?: string;
+  publishServer?: string;
+  publishToken?: string;
   tags?: string[];
   prefixes?: string[];
   template?: string;
@@ -32,12 +38,12 @@ const defaultPublishConfig: PublishConfig = {
 };
 
 async function generatePage(
+  fs: Filesystem,
   pageName: string,
   htmlPath: string,
   mdPath: string,
   publishedPages: string[],
   publishConfig: PublishConfig,
-  destDir: string,
   template: Handlebars.TemplateDelegate<any>,
 ) {
   const text = await space.readPage(pageName);
@@ -53,16 +59,16 @@ async function generatePage(
   for (const attachment of attachments) {
     try {
       const attachmentData = await space.readAttachment(attachment);
-      console.log("Writing", `${destDir}${attachment}`);
-      await space.writeAttachment(`${destDir}${attachment}`, attachmentData);
+      console.log("Writing", attachment);
+      await fs.writeFile(attachment, attachmentData);
     } catch (e: any) {
       console.error("Error reading attachment", attachment, e.message);
     }
   }
   // Write .md file
-  await space.writeAttachment(mdPath, new TextEncoder().encode(publishMd));
+  await fs.writeFile(mdPath, new TextEncoder().encode(publishMd));
   // Write .html file
-  await space.writeAttachment(
+  await fs.writeFile(
     htmlPath,
     new TextEncoder().encode(template({
       pageName,
@@ -84,21 +90,39 @@ export async function publishAll() {
       ...defaultPublishConfig,
       ...loadedPublishConfig,
     };
+    try {
+      const publishSecrets = await readSecret("publish");
+      publishConfig.publishToken = publishSecrets.token;
+    } catch (e) {
+      console.error("No publish secret found", e);
+    }
   } catch (e: any) {
     console.warn("No SETTINGS page found, using defaults", e.message);
   }
   const destPrefix = publishConfig.destPrefix!;
-  console.log("Publishing to", destPrefix);
+
+  if (publishConfig.publishServer && !publishConfig.publishToken) {
+    throw new Error(
+      "publishServer specified, but no matching 'token' under 'publish' found in SECRETS",
+    );
+  }
+
+  const fs = publishConfig.publishServer
+    ? new HttpFilesystem(
+      publishConfig.publishServer,
+      publishConfig.publishToken!,
+    )
+    : new SpaceFilesystem(destPrefix);
+
+  console.log("Publishing to", fs);
   let allPages = await space.listPages();
   const allPageMap: Map<string, any> = new Map(
     allPages.map((pm) => [pm.name, pm]),
   );
 
   console.log("Cleaning up destination directory");
-  for (const attachment of await space.listAttachments()) {
-    if (attachment.name.startsWith(destPrefix)) {
-      await space.deleteAttachment(attachment.name);
-    }
+  for (const existingFile of await fs.listFiles()) {
+    await fs.deleteFile(existingFile.name);
   }
 
   allPages = [...allPageMap.values()];
@@ -144,12 +168,12 @@ export async function publishAll() {
   const publishedPagesArray = [...publishedPages];
   for (const page of publishedPagesArray) {
     await generatePage(
+      fs,
       page,
-      `${destPrefix}${page}/index.html`,
-      `${destPrefix}${page}.md`,
+      `${page}/index.html`,
+      `${page}.md`,
       publishedPagesArray,
       publishConfig,
-      destPrefix,
       template,
     );
   }
@@ -157,12 +181,12 @@ export async function publishAll() {
   if (publishConfig.indexPage) {
     console.log("Writing", publishConfig.indexPage);
     await generatePage(
+      fs,
       publishConfig.indexPage,
-      `${destPrefix}index.html`,
-      `${destPrefix}index.md`,
+      `index.html`,
+      `index.md`,
       publishedPagesArray,
       publishConfig,
-      destPrefix,
       template,
     );
   }
@@ -187,8 +211,8 @@ export async function publishAll() {
       });
     }
   }
-  await space.writeAttachment(
-    `${destPrefix}index.json`,
+  await fs.writeFile(
+    `index.json`,
     new TextEncoder().encode(
       JSON.stringify(publishedFiles, null, 2),
     ),
@@ -230,7 +254,7 @@ function cleanMarkdown(
           text: `[${lastBit}](https://${page.slice(1)})`,
         };
       }
-      if (!validPages.includes(page)) {
+      if (!validPages.includes(page) && !page.startsWith("!")) {
         // Replace with just page text
         return {
           text: `_${page}_`,
