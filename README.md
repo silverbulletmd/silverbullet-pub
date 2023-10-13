@@ -17,7 +17,7 @@ The tool can be run in two ways:
 After running the _Publish All_ command (from SB, or via the CLI as described below) the resulting website is written into your space folder under `_public` by default (but this is configurable). Note that because SilverBullet does not list pages starting with `_`, this folder will not be visible in the SilverBullet page picker, it’s only visible on disk.
 
 After this, it’s up to you to deploy these files to any host capable of statically serving files. This repository itself is published to
-[pub.silverbullet.md](https://publish.silverbullet.md) using _Pub_ combined with [Netlify](https://netlify.com/).
+[pub.silverbullet.md](https://pub.silverbullet.md) using _Pub_ combined with [Netlify](https://netlify.com/).
 [Check the repo](https://github.com/silverbulletmd/silverbullet-pub/blob/main/netlify.toml) to see how this works.
 
 ## Installation
