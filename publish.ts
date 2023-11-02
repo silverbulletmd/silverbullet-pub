@@ -1,10 +1,16 @@
-import { editor, markdown, space, sync } from "$sb/silverbullet-syscall/mod.ts";
+import {
+  editor,
+  handlebars,
+  markdown,
+  space,
+  sync,
+  system,
+} from "$sb/syscalls.ts";
 import { readCodeBlockPage } from "$sb/lib/yaml_page.ts";
 import { readSecret } from "$sb/lib/secrets_page.ts";
 import { readSetting } from "$sb/lib/settings_page.ts";
-import { renderMarkdownToHtml } from "$silverbullet/plugs/markdown/markdown_render.ts";
-
-import Handlebars from "handlebars";
+import * as index from "$silverbullet/plugs/index/plug_api.ts";
+import type { PageObject } from "$silverbullet/plugs/index/page.ts";
 
 import {
   collectNodesOfType,
@@ -12,7 +18,6 @@ import {
   renderToText,
   replaceNodesMatching,
 } from "$sb/lib/tree.ts";
-import { parseMarkdown } from "$silverbullet/plug-api/silverbullet-syscall/markdown.ts";
 import { FileMeta } from "$silverbullet/plug-api/types.ts";
 import { SpaceFilesystem } from "./space_fs.ts";
 import { HttpFilesystem } from "./http_fs.ts";
@@ -44,15 +49,16 @@ async function generatePage(
   mdPath: string,
   publishedPages: string[],
   publishConfig: PublishConfig,
-  template: Handlebars.TemplateDelegate<any>,
+  template: string,
 ) {
   const text = await space.readPage(pageName);
   console.log("Writing", pageName);
   const mdTree = await markdown.parseMarkdown(text);
-  const publishMd = cleanMarkdown(
+  const publishMd = await processMarkdown(
     mdTree,
     publishConfig,
     publishedPages,
+    pageName,
   );
   // console.log("CLean md", publishMd)
   const attachments = collectAttachments(mdTree);
@@ -70,15 +76,21 @@ async function generatePage(
   // Write .html file
   await fs.writeFile(
     htmlPath,
-    new TextEncoder().encode(template({
-      pageName,
-      config: publishConfig,
-      isIndex: pageName === publishConfig.indexPage,
-      body: renderMarkdownToHtml(await parseMarkdown(publishMd), {
-        smartHardBreak: true,
-        attachmentUrlPrefix: "/",
-      }),
-    })),
+    new TextEncoder().encode(
+      await handlebars.renderTemplate(template, {
+        pageName,
+        config: publishConfig,
+        isIndex: pageName === publishConfig.indexPage,
+        body: await system.invokeFunction(
+          "markdown.markdownToHtml",
+          publishMd,
+          {
+            smartHardBreak: true,
+            attachmentUrlPrefix: "/",
+          },
+        ),
+      }, {}),
+    ),
   );
 }
 
@@ -90,11 +102,13 @@ export async function publishAll() {
       ...defaultPublishConfig,
       ...loadedPublishConfig,
     };
-    try {
-      const publishSecrets = await readSecret("publish");
-      publishConfig.publishToken = publishSecrets.token;
-    } catch (e) {
-      console.error("No publish secret found", e);
+    if (publishConfig.publishServer) {
+      try {
+        const publishSecrets = await readSecret("publish");
+        publishConfig.publishToken = publishSecrets.token;
+      } catch (e) {
+        console.error("No publish secret found", e);
+      }
     }
   } catch (e: any) {
     console.warn("No SETTINGS page found, using defaults", e.message);
@@ -115,7 +129,8 @@ export async function publishAll() {
     : new SpaceFilesystem(destPrefix);
 
   console.log("Publishing to", fs);
-  let allPages = await space.listPages();
+  let allPages = await index.queryObjects<PageObject>("page", {});
+  // console.log("All pages", allPages);
   const allPageMap: Map<string, any> = new Map(
     allPages.map((pm) => [pm.name, pm]),
   );
@@ -163,7 +178,6 @@ export async function publishAll() {
   console.log("Publishing", [...publishedPages]);
 
   const pageTemplate = await readCodeBlockPage(publishConfig.template!);
-  const template = Handlebars.compile(pageTemplate);
 
   const publishedPagesArray = [...publishedPages];
   for (const page of publishedPagesArray) {
@@ -174,7 +188,7 @@ export async function publishAll() {
       `${page}.md`,
       publishedPagesArray,
       publishConfig,
-      template,
+      pageTemplate!,
     );
   }
 
@@ -187,7 +201,7 @@ export async function publishAll() {
       `index.md`,
       publishedPagesArray,
       publishConfig,
-      template,
+      pageTemplate!,
     );
   }
 
@@ -237,11 +251,12 @@ function collectAttachments(tree: ParseTree) {
   return attachments;
 }
 
-function cleanMarkdown(
+async function processMarkdown(
   mdTree: ParseTree,
   publishConfig: PublishConfig,
   validPages: string[],
-): string {
+  pageName: string,
+): Promise<string> {
   replaceNodesMatching(mdTree, (n) => {
     if (n.type === "WikiLink") {
       let page = n.children![1].children![0].text!;
@@ -261,6 +276,7 @@ function cleanMarkdown(
         };
       }
     }
+
     // Simply get rid of these
     if (n.type === "CommentBlock" || n.type === "Comment") {
       return null;
@@ -271,5 +287,11 @@ function cleanMarkdown(
       }
     }
   });
+  // Use markdown plug's logic to expand code widgets
+  mdTree = await system.invokeFunction(
+    "markdown.expandCodeWidgets",
+    mdTree,
+    pageName,
+  );
   return renderToText(mdTree).trim();
 }

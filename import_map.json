@@ -1,7 +1,6 @@
 {
   "imports": {
     "$sb/": "../silverbullet/plug-api/",
-    "$silverbullet/": "../silverbullet/",
-    "handlebars": "https://esm.sh/handlebars@4.7.7?target=es2022"
+    "$silverbullet/": "../silverbullet/"
   }
 }

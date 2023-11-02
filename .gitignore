@@ -3,3 +3,4 @@ _public
 pub.db*
 deno.lock
 *.map
+.silverbullet.*

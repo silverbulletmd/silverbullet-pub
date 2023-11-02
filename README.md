@@ -1,16 +1,13 @@
 # Silver Bullet Pub
 SilverBullet Pub is a simple tool to publish a a subset of your [SilverBullet](https://silverbullet.md) space as a static website. 
 
-**Note:**
-this is still experimental, use at your own risk.
+**Note:** this is still experimental, use at your own risk.
 
 SilverBullet Pub publishes a subset of a space in two formats:
-
 - HTML (.html files based on a handlebars template that you can override, see [[template/page|the template used for this site]] and configuration part of [[SETTINGS]]).
 - Markdown (.md files) (and an associated `index.json` file for SilverBullet to read via [[!silverbullet.md/Federation]]).
 
 The tool can be run in two ways:
-
 1. From the SB UI, via the (via the {[Pub: Publish All]} command)
 2. As a stand-alone CLI tool (see below)
 
@@ -21,15 +18,12 @@ After this, it’s up to you to deploy these files to any host capable of static
 [Check the repo](https://github.com/silverbulletmd/silverbullet-pub/blob/main/netlify.toml) to see how this works.
 
 ## Installation
-
 Run the {[Plugs: Add]} command and add the following plug:
-
 ```yaml
 - github:silverbulletmd/silverbullet-pub/pub.plug.js
 ```
 
 ## Configuration
-
 SilverBullet Pub is configured through [[SETTINGS]].
 
 ## Running from the CLI
@@ -41,6 +35,10 @@ silverbullet plug:run <<path-to-your-space>> pub.publishAll
 
 ## Roadmap
 This version of SilverBullet Pub is very much an MVP. Some topics for future development:
-
 - [ ] More flexibility in building and sharing templates
 - [ ] Introduce a “pub server” that can be self-hosted somewhere (docker container, or Deno Deploy) that this plug can publish directly to (with a basic authentication system).
+
+## Site map
+```query
+page render [[!silverbullet.md/template/page]]
+```
