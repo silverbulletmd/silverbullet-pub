@@ -20,7 +20,7 @@ export class HttpServer {
   }
 
   start() {
-    const fsRouter = this.addFsRoutes(this.spacePrimitives);
+    const fsRouter = this.addFsRoutes();
     this.app.use(fsRouter.routes());
     this.app.use(fsRouter.allowedMethods());
 
@@ -43,7 +43,7 @@ export class HttpServer {
     );
   }
 
-  private addFsRoutes(spacePrimitives: SpacePrimitives): Router {
+  private addFsRoutes(): Router {
     const fsRouter = new Router();
     const corsMiddleware = oakCors({
       allowedHeaders: "*",
@@ -54,20 +54,20 @@ export class HttpServer {
     fsRouter.use(corsMiddleware);
 
     // File list
-    // fsRouter.get(
-    //   "/index.json",
-    //   // corsMiddleware,
-    //   async ({ response }) => {
-    //     // Only handle direct requests for a JSON representation of the file list
-    //     response.headers.set("Content-type", "application/json");
-    //     response.headers.set("X-Space-Path", this.options.pagesPath);
-    //     const files = await spacePrimitives.fetchFileList();
-    //     files.forEach((f) => {
-    //       f.perm = "ro";
-    //     });
-    //     response.body = JSON.stringify(files);
-    //   },
-    // );
+    fsRouter.get(
+      "/index.json",
+      // corsMiddleware,
+      async ({ response }) => {
+        // Only handle direct requests for a JSON representation of the file list
+        response.headers.set("Content-type", "application/json");
+        response.headers.set("X-Space-Path", this.options.pagesPath);
+        const files = await this.spacePrimitives.fetchFileList();
+        files.forEach((f) => {
+          f.perm = "ro";
+        });
+        response.body = JSON.stringify(files);
+      },
+    );
 
     const filePathRegex = "\/(.*)";
 
@@ -89,7 +89,7 @@ export class HttpServer {
           try {
             if (request.headers.has("X-Get-Meta")) {
               // Getting meta via GET request
-              const fileData = await spacePrimitives.getFileMeta(name);
+              const fileData = await this.spacePrimitives.getFileMeta(name);
               response.status = 200;
               this.fileMetaToHeaders(response.headers, fileData);
               response.body = "";
@@ -98,11 +98,13 @@ export class HttpServer {
             let fileData: { meta: FileMeta; data: Uint8Array } | undefined;
 
             try {
-              fileData = await spacePrimitives.readFile(name);
+              fileData = await this.spacePrimitives.readFile(name);
             } catch (e: any) {
               // console.error(e);
               if (e.message === "Not found") {
-                fileData = await spacePrimitives.readFile(`${name}/index.html`);
+                fileData = await this.spacePrimitives.readFile(
+                  `${name}/index.html`,
+                );
               }
             }
             if (!fileData) {
@@ -147,7 +149,7 @@ export class HttpServer {
           const body = await request.body({ type: "bytes" }).value;
 
           try {
-            const meta = await spacePrimitives.writeFile(
+            const meta = await this.spacePrimitives.writeFile(
               name,
               body,
             );
@@ -173,7 +175,7 @@ export class HttpServer {
           return;
         }
         try {
-          await spacePrimitives.deleteFile(name);
+          await this.spacePrimitives.deleteFile(name);
           response.status = 200;
           response.body = "OK";
         } catch (e: any) {
@@ -211,6 +213,7 @@ export class HttpServer {
     );
     headers.set("Cache-Control", "no-cache");
     headers.set("X-Permission", "ro");
+    headers.set("X-Created", "" + fileMeta.created);
     headers.set("X-Content-Length", "" + fileMeta.size);
   }
 

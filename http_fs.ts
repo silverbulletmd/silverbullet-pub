@@ -63,6 +63,7 @@ export class HttpFilesystem implements Filesystem {
       name: path,
       contentType: headers.get("Content-Type") || "application/octet-stream",
       perm: headers.get("X-Perm") as "ro" | "rw",
+      created: +(headers.get("X-Created") || "0"),
       lastModified: +(headers.get("X-Last-Modified") || "0"),
       size: headers.has("X-Content-Length")
         ? +headers.get("X-Content-Length")!

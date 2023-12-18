@@ -38,7 +38,14 @@ This version of SilverBullet Pub is very much an MVP. Some topics for future dev
 - [ ] More flexibility in building and sharing templates
 - [ ] Introduce a “pub server” that can be self-hosted somewhere (docker container, or Deno Deploy) that this plug can publish directly to (with a basic authentication system).
 
+
+
 ## Site map
 ```query
 page render [[!silverbullet.md/template/page]]
 ```
+
+```template
+page: "[[template/test]]"
+```
+
