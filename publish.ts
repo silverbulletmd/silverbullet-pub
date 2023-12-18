@@ -10,7 +10,6 @@ import { readCodeBlockPage } from "$sb/lib/yaml_page.ts";
 import { readSecret } from "$sb/lib/secrets_page.ts";
 import { readSetting } from "$sb/lib/settings_page.ts";
 import * as index from "$silverbullet/plugs/index/plug_api.ts";
-import type { PageObject } from "$silverbullet/plugs/index/page.ts";
 
 import {
   collectNodesOfType,
@@ -18,7 +17,7 @@ import {
   renderToText,
   replaceNodesMatching,
 } from "$sb/lib/tree.ts";
-import { FileMeta } from "$silverbullet/plug-api/types.ts";
+import { FileMeta, PageMeta } from "$silverbullet/plug-api/types.ts";
 import { SpaceFilesystem } from "./space_fs.ts";
 import { HttpFilesystem } from "./http_fs.ts";
 import { Filesystem } from "./fs.ts";
@@ -51,8 +50,8 @@ async function generatePage(
   publishConfig: PublishConfig,
   template: string,
 ) {
-  const text = await space.readPage(pageName);
   console.log("Writing", pageName);
+  const text = await space.readPage(pageName);
   const mdTree = await markdown.parseMarkdown(text);
   const publishMd = await processMarkdown(
     mdTree,
@@ -129,14 +128,26 @@ export async function publishAll() {
     : new SpaceFilesystem(destPrefix);
 
   console.log("Publishing to", fs);
-  let allPages = await index.queryObjects<PageObject>("page", {});
-  // console.log("All pages", allPages);
+  let allPages = await index.queryObjects<PageMeta>("page", {});
+  console.log("All pages", allPages);
   const allPageMap: Map<string, any> = new Map(
     allPages.map((pm) => [pm.name, pm]),
   );
 
+  allPageMap.delete("SECRETS");
+
   console.log("Cleaning up destination directory");
-  for (const existingFile of await fs.listFiles()) {
+  let allFiles: FileMeta[] = [];
+  try {
+    allFiles = await fs.listFiles();
+  } catch (e: any) {
+    if (e.message === "Not found") {
+      console.log(
+        "Could not fetch file list from remote, assume it has not been initialized yet",
+      );
+    }
+  }
+  for (const existingFile of allFiles) {
     await fs.deleteFile(existingFile.name);
   }
 
@@ -192,8 +203,10 @@ export async function publishAll() {
     );
   }
 
+  console.log("Done writing published paegs");
+
   if (publishConfig.indexPage) {
-    console.log("Writing", publishConfig.indexPage);
+    console.log("Writing index page", publishConfig.indexPage);
     await generatePage(
       fs,
       publishConfig.indexPage,
@@ -205,25 +218,20 @@ export async function publishAll() {
     );
   }
 
-  console.log("Writing", `index.json`);
+  console.log("Publishing index.json");
   const publishedFiles: FileMeta[] = [];
   for (
-    const { name, size, contentType, lastModified } of await space
-      .listAttachments()
+    const fileMeta of await fs
+      .listFiles()
   ) {
-    if (name.startsWith(destPrefix)) {
-      if (contentType === "text/html") {
-        // Skip the generated HTML files
-        continue;
-      }
-      publishedFiles.push({
-        name: name.slice(destPrefix.length),
-        size,
-        contentType,
-        lastModified,
-        perm: "ro",
-      });
+    if (fileMeta.contentType === "text/html") {
+      // Skip the generated HTML files
+      continue;
     }
+    publishedFiles.push({
+      ...fileMeta,
+      perm: "ro",
+    });
   }
   await fs.writeFile(
     `index.json`,
@@ -257,6 +265,17 @@ async function processMarkdown(
   validPages: string[],
   pageName: string,
 ): Promise<string> {
+  // Use markdown plug's logic to expand code widgets
+  try {
+    mdTree = await system.invokeFunction(
+      "markdown.expandCodeWidgets",
+      mdTree,
+      pageName,
+    );
+  } catch (e: any) {
+    console.error("Error expanding code widgets in page", pageName, e.message);
+  }
+
   replaceNodesMatching(mdTree, (n) => {
     if (n.type === "WikiLink") {
       let page = n.children![1].children![0].text!;
@@ -287,11 +306,5 @@ async function processMarkdown(
       }
     }
   });
-  // Use markdown plug's logic to expand code widgets
-  mdTree = await system.invokeFunction(
-    "markdown.expandCodeWidgets",
-    mdTree,
-    pageName,
-  );
   return renderToText(mdTree).trim();
 }

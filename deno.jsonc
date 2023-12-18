@@ -2,14 +2,21 @@
   "importMap": "import_map.json",
   "tasks": {
     "build": "silverbullet plug:compile --importmap import_map.json pub.plug.yaml",
-    "pub": "deno task build && silverbullet plug:run . pub.publishAll",
+    "pub": "deno task build && deno task clean && SB_DB_BACKEND=memory silverbullet plug:run . pub.publishAll",
     "clean": "rm -rf _public _plug",
     "test": "deno test --import-map import_map.json -A --unstable",
     "install": "deno install -f -A --unstable --import-map import_map.json silverbullet-pub-server.ts"
   },
   "lint": {
     "rules": {
-      "exclude": ["no-explicit-any"]
+      "exclude": [
+        "no-explicit-any"
+      ]
     }
+  },
+  "fmt": {
+    "exclude": [
+      "*.md"
+    ]
   }
 }

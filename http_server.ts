@@ -168,6 +168,11 @@ export class HttpServer {
           return;
         }
         const name = params[0];
+        if (name === "index.json") {
+          response.status = 200;
+          response.body = "OK (noop)";
+          return;
+        }
         console.log("Deleting file", name);
         if (name.startsWith(".")) {
           // Don't expose hidden files

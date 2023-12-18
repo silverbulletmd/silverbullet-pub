@@ -2,5 +2,8 @@
   "deno.enable": true,
   "editor.formatOnSave": true,
   "deno.config": "deno.jsonc",
-  "deno.unstable": true
+  "deno.unstable": true,
+  "[markdown]": {
+    "editor.formatOnSave": false
+  }
 }

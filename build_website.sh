@@ -10,3 +10,4 @@ fi
 
 silverbullet plug:run . pub.publishAll
 cp _headers _public/
+deno bundle silverbullet-pub-server.ts > silverbullet-pub-server.js

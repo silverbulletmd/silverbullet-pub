@@ -1,5 +1,3 @@
-This page contains settings for configuring SilverBullet and its plugs. Any
-changes outside of the yaml block will be overwritten.
 
 ```yaml
 indexPage: README
@@ -8,7 +6,7 @@ publish:
   indexPage: README
   # Site title
   title: SilverBullet Publish
-  #publishServer: http://localhost:3333
+  # publishServer: https://zef-pub.deno.dev
   # Page containing the handlebars template to use to render pages
   # defaults to "!pub.silverbullet.md/template/page"
   template: template/page
@@ -24,6 +22,6 @@ publish:
   #prefixes:
   #- /public
   # Publish all pages with specific tag only (assuming publishAll is off)
-  #tags:
-  #- pub
+  tags:
+  - pub
 ```

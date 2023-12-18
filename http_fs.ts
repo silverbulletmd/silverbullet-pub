@@ -21,6 +21,9 @@ export class HttpFilesystem implements Filesystem {
     const r = await this.authenticatedFetch(`${this.url}/index.json`, {
       method: "GET",
     });
+    if (r.status === 404) {
+      throw new Error("Not found");
+    }
     return r.json();
   }
   async readFile(path: string): Promise<Uint8Array> {
@@ -54,7 +57,7 @@ export class HttpFilesystem implements Filesystem {
       method: "DELETE",
     });
     if (!r.ok) {
-      throw new Error(`Failed to delete file: ${await r.text()}`);
+      throw new Error(`Failed to delete file: ${path}: ${await r.text()}`);
     }
   }
 

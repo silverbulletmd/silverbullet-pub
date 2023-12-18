@@ -2,5 +2,6 @@ _public
 .DS_Store
 pub.db*
 deno.lock
+SECRETS.md
 *.map
 .silverbullet.*
