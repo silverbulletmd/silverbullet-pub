@@ -37,5 +37,5 @@ silverbullet plug:run <<path-to-your-space>> pub.publishAll
 
 ## Site map
 ```query
-page render [[!silverbullet.md/template/page]]
+page render [[!silverbullet.md/Library/Core/Query/Page]]
 ```
