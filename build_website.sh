@@ -5,7 +5,7 @@ if [ "$1" != "local" ]; then
     curl -fsSL https://deno.land/install.sh | sh
     export PATH=~/.deno/bin:$PATH
 
-    deno install -f --name silverbullet --unstable -A https://silverbullet.md/silverbullet.js
+    deno install -f --name silverbullet --unstable -A https://edge.silverbullet.md/silverbullet.js
 fi
 
 silverbullet plug:run . pub.publishAll
