@@ -1,6 +1,6 @@
 import {
   editor,
-  handlebars,
+  template,
   markdown,
   space,
   sync,
@@ -48,7 +48,7 @@ async function generatePage(
   mdPath: string,
   publishedPages: string[],
   publishConfig: PublishConfig,
-  template: string,
+  htmlTemplate: string,
 ) {
   console.log("Writing", pageName);
   const text = await space.readPage(pageName);
@@ -76,7 +76,7 @@ async function generatePage(
   await fs.writeFile(
     htmlPath,
     new TextEncoder().encode(
-      await handlebars.renderTemplate(template, {
+      await template.renderTemplate(htmlTemplate, {
         pageName,
         config: publishConfig,
         isIndex: pageName === publishConfig.indexPage,

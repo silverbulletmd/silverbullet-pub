@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{#unless isIndex}}{{pageName}} — {{config.title}}{{else}}{{config.title}}{{/unless}}</title>
+    <title>{{#if !isIndex}}{{pageName}} — {{config.title}}{{else}}{{config.title}}{{/if}}</title>
     <style>
         body {
             font-family: georgia, times, serif;
@@ -64,10 +64,10 @@
 </head>
 
 <body>
-    {{#unless isIndex}}
+    {{#if !isIndex}}
     <h1>{{pageName}}</h1>
-    {{/unless}}
-    {{{body}}}
+    {{/if}}
+    {{body}}
 </body>
 
 </html>
