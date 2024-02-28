@@ -1,5 +1,5 @@
-import { space } from "$sb/silverbullet-syscall/mod.ts";
-import { FileMeta } from "$silverbullet/plug-api/types.ts";
+import { space } from "$sb/syscalls.ts";
+import { FileMeta } from "$sb/types.ts";
 import { Filesystem } from "./fs.ts";
 
 export class SpaceFilesystem implements Filesystem {

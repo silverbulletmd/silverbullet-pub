@@ -1,11 +1,10 @@
 {
   "importMap": "import_map.json",
   "tasks": {
-    "build": "silverbullet plug:compile --importmap import_map.json pub.plug.yaml",
+    "build": "silverbullet plug:compile pub.plug.yaml",
     "pub": "deno task build && deno task clean && SB_DB_BACKEND=memory silverbullet plug:run . pub.publishAll",
     "clean": "rm -rf _public _plug",
-    "test": "deno test --import-map import_map.json -A --unstable",
-    "install": "deno install -f -A --unstable --import-map import_map.json silverbullet-pub-server.ts"
+    "install": "deno install -f -A --unstable-kv --import-map import_map.json silverbullet-pub-server.ts"
   },
   "lint": {
     "rules": {

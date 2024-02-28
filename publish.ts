@@ -1,15 +1,14 @@
 import {
   editor,
-  template,
   markdown,
   space,
   sync,
   system,
+  template,
 } from "$sb/syscalls.ts";
 import { readCodeBlockPage } from "$sb/lib/yaml_page.ts";
 import { readSecret } from "$sb/lib/secrets_page.ts";
 import { readSetting } from "$sb/lib/settings_page.ts";
-import * as index from "$silverbullet/plugs/index/plug_api.ts";
 
 import {
   collectNodesOfType,
@@ -17,7 +16,7 @@ import {
   renderToText,
   replaceNodesMatching,
 } from "$sb/lib/tree.ts";
-import { FileMeta, PageMeta } from "$silverbullet/plug-api/types.ts";
+import { FileMeta, PageMeta } from "$sb/types.ts";
 import { SpaceFilesystem } from "./space_fs.ts";
 import { HttpFilesystem } from "./http_fs.ts";
 import { Filesystem } from "./fs.ts";
@@ -59,7 +58,6 @@ async function generatePage(
     publishedPages,
     pageName,
   );
-  // console.log("CLean md", publishMd)
   const attachments = collectAttachments(mdTree);
   for (const attachment of attachments) {
     try {
@@ -128,7 +126,11 @@ export async function publishAll() {
     : new SpaceFilesystem(destPrefix);
 
   console.log("Publishing to", fs);
-  let allPages = await index.queryObjects<PageMeta>("page", {});
+  let allPages: PageMeta[] = await system.invokeFunction(
+    "index.queryObjects",
+    "page",
+    {},
+  );
   console.log("All pages", allPages);
   const allPageMap: Map<string, any> = new Map(
     allPages.map((pm) => [pm.name, pm]),

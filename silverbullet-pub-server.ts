@@ -3,7 +3,7 @@ import { HttpServer } from "./http_server.ts";
 import type { SpacePrimitives } from "$silverbullet/common/spaces/space_primitives.ts";
 import { DiskSpacePrimitives } from "$silverbullet/common/spaces/disk_space_primitives.ts";
 import { ChunkedKvStoreSpacePrimitives } from "$silverbullet/common/spaces/chunked_datastore_space_primitives.ts";
-import { DenoKvPrimitives } from "$silverbullet/plugos/lib/deno_kv_primitives.ts";
+import { DenoKvPrimitives } from "$silverbullet/lib/data/deno_kv_primitives.ts";
 import { Command } from "./deps.ts";
 
 await new Command()

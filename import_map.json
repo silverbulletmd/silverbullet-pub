@@ -1,6 +1,8 @@
 {
   "imports": {
-    "$sb/": "https://deno.land/x/silverbullet@0.7.1/plug-api/",
-    "$silverbullet/": "https://deno.land/x/silverbullet@0.7.1/"
+    "$sb/": "../silverbullet/plug-api/",
+    "$silverbullet/": "../silverbullet/",
+    "$lib/": "../silverbullet/lib/",
+    "mimetypes": "https://deno.land/x/mimetypes@v1.0.0/mod.ts"
   }
 }

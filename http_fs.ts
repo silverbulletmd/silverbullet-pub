@@ -1,5 +1,5 @@
-import "$sb/lib/fetch.ts";
-import { FileMeta } from "$silverbullet/plug-api/types.ts";
+import "$sb/lib/native_fetch.ts";
+import { FileMeta } from "$sb/types.ts";
 import { Filesystem } from "./fs.ts";
 
 export class HttpFilesystem implements Filesystem {
