@@ -1,0 +1,34 @@
+[
+  {
+    "name": "README.md",
+    "created": 1709374457240,
+    "lastModified": 1709374457240,
+    "contentType": "text/markdown",
+    "size": 1931,
+    "perm": "ro"
+  },
+  {
+    "name": "SETTINGS.md",
+    "created": 1709374457276,
+    "lastModified": 1709374457276,
+    "contentType": "text/markdown",
+    "size": 891,
+    "perm": "ro"
+  },
+  {
+    "name": "index.md",
+    "created": 1709374457284,
+    "lastModified": 1709374457428,
+    "contentType": "text/markdown",
+    "size": 1931,
+    "perm": "ro"
+  },
+  {
+    "name": "template/page.md",
+    "created": 1709374457292,
+    "lastModified": 1709374457292,
+    "contentType": "text/markdown",
+    "size": 1448,
+    "perm": "ro"
+  }
+]

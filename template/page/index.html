@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>template/page — SilverBullet Publish</title>
+    <style>
+        body {
+            font-family: georgia, times, serif;
+            font-size: 14pt;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-spacing: 0;
+        }
+
+        thead tr {
+            background-color: #333;
+            color: #eee;
+        }
+
+        th,
+        td {
+            padding: 8px;
+        }
+
+        tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+
+        ul li p {
+            margin: 0;
+        }
+
+        a[href] {
+            text-decoration: none;
+        }
+
+        blockquote {
+            border-left: 1px solid #333;
+            margin-left: 2px;
+            padding-left: 10px;
+        }
+
+        pre {
+           background-color: #f2eeee;
+           border: 1px solid #cecece;
+           padding: 5px;
+           overflow-x: scroll;
+        }
+
+        img {
+            max-width: 90%;
+        }
+    </style>
+</head>
+
+<body>
+        <h1>template/page</h1>
+        <pre data-lang="html">&lt;!DOCTYPE html&gt;<br>&lt;html lang=&quot;en&quot;&gt;<br>&lt;head&gt;<br>&nbsp; &nbsp; &lt;meta charset=&quot;UTF-8&quot;&gt;<br>&nbsp; &nbsp; &lt;base href=&quot;/&quot; /&gt;<br>&nbsp; &nbsp; &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;<br>&nbsp; &nbsp; &lt;title&gt;{{#if !isIndex}}{{pageName}} — {{config.title}}{{else}}{{config.title}}{{/if}}&lt;/title&gt;<br>&nbsp; &nbsp; &lt;style&gt;<br>&nbsp; &nbsp; &nbsp; &nbsp; body {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; font-family: georgia, times, serif;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; font-size: 14pt;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; max-width: 800px;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; margin-left: auto;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; margin-right: auto;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; padding-left: 20px;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; padding-right: 20px;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; table {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; width: 100%;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; border-spacing: 0;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; thead tr {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; background-color: #333;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; color: #eee;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; th,<br>&nbsp; &nbsp; &nbsp; &nbsp; td {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; padding: 8px;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; tbody tr:nth-of-type(even) {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; background-color: #f3f3f3;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; ul li p {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; margin: 0;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; a[href] {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; text-decoration: none;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; blockquote {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; border-left: 1px solid #333;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; margin-left: 2px;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; padding-left: 10px;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; pre {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; background-color: #f2eeee;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; border: 1px solid #cecece;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; padding: 5px;<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; overflow-x: scroll;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br><br>&nbsp; &nbsp; &nbsp; &nbsp; img {<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; max-width: 90%;<br>&nbsp; &nbsp; &nbsp; &nbsp; }<br>&nbsp; &nbsp; &lt;/style&gt;<br>&lt;/head&gt;<br><br>&lt;body&gt;<br>&nbsp; &nbsp; {{#if !isIndex}}<br>&nbsp; &nbsp; &lt;h1&gt;{{pageName}}&lt;/h1&gt;<br>&nbsp; &nbsp; {{/if}}<br>&nbsp; &nbsp; {{body}}<br>&lt;/body&gt;<br><br>&lt;/html&gt;</pre>
+</body>
+
+</html>

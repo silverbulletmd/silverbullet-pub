@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SETTINGS — SilverBullet Publish</title>
+    <style>
+        body {
+            font-family: georgia, times, serif;
+            font-size: 14pt;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-spacing: 0;
+        }
+
+        thead tr {
+            background-color: #333;
+            color: #eee;
+        }
+
+        th,
+        td {
+            padding: 8px;
+        }
+
+        tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+
+        ul li p {
+            margin: 0;
+        }
+
+        a[href] {
+            text-decoration: none;
+        }
+
+        blockquote {
+            border-left: 1px solid #333;
+            margin-left: 2px;
+            padding-left: 10px;
+        }
+
+        pre {
+           background-color: #f2eeee;
+           border: 1px solid #cecece;
+           padding: 5px;
+           overflow-x: scroll;
+        }
+
+        img {
+            max-width: 90%;
+        }
+    </style>
+</head>
+
+<body>
+        <h1>SETTINGS</h1>
+        <pre data-lang="yaml">indexPage: README<br>publish:<br>&nbsp; # indexPage specific to the published site<br>&nbsp; indexPage: README<br>&nbsp; # Site title<br>&nbsp; title: SilverBullet Publish<br>&nbsp; # publishServer: https://zef-pub.deno.dev<br>&nbsp; # Page containing the handlebars template to use to render pages<br>&nbsp; # defaults to &quot;!pub.silverbullet.md/template/page&quot;<br>&nbsp; template: template/page<br>&nbsp; # Destination prefix for where to write the files to (has to be inside the space), defaults to public/<br>&nbsp; destPrefix: _public/<br>&nbsp; # Remove hashtags from the output<br>&nbsp; removeHashtags: true<br>&nbsp; # Entirely remove page links to pages that are not published <br>&nbsp; removeUnpublishedLinks: false<br>&nbsp; # Publish ALL pages in this space (defaults to false)<br>&nbsp; publishAll: true<br>&nbsp; # Publish all pages with a specifix prefix only (assuming publishAll is off)<br>&nbsp; #prefixes:<br>&nbsp; #- /public<br>&nbsp; # Publish all pages with specific tag only (assuming publishAll is off)<br>&nbsp; tags:<br>&nbsp; - pub</pre>
+</body>
+
+</html>
