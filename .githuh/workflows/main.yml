@@ -1,0 +1,28 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # Set a branch to trigger the deployment
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest  # You can choose a different runner if you prefer
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.41
+
+    - name: Build Static Site
+      run: |
+        deno task pub
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}  # GitHub automatically creates this secret
+        publish_dir: ./_public  # Replace with the path to your build output
