@@ -12,18 +12,18 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v2
-    - name: Setup Deno
+
+      - name: Setup Deno
       uses: denoland/setup-deno@v1
       with:
         deno-version: v1.41
 
     - name: Build Static Site
       run: |
-        deno install -f --name silverbullet  --unstable-kv --unstable-worker-options -A https://edge.silverbullet.md/silverbullet.js
-        deno task pub
+        SB_DB_BACKEND=memory deno run --unstable-kv --unstable-worker-options -A https://edge.silverbullet.md/silverbullet.js plug:run . pub.publishAll
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}  # GitHub automatically creates this secret
-        publish_dir: ./_public  # Replace with the path to your build output
+        github_token: ${{ secrets.GITHUB_TOKEN }} 
+        publish_dir: ./_public
