@@ -35,6 +35,16 @@ First make sure you have the plug installed into your space. Then, from the comm
 SB_DB_BACKEND=memory silverbullet plug:run <<path-to-your-space>> pub.publishAll
 ```
 
+## Running in a CI environment
+You may use pub to automatically publish as part of a CI build. For this make sure that you have checked in your `_plug` folder (at least with the `pub.plug.js` file) in your code repository.
+
+Here are the minimal steps for your CI build:
+
+1. Install Deno
+2. Run `SB_DB_BACKEND=memory deno run --unstable-kv --unstable-worker-options -A https://get.silverbullet.md plug:run . pub.publishAll`
+
+See `.github/workflows/gh-pages.yml` and `netlify.toml` in this repo as examples
+
 ## Site map
 ```query
 page render [[!silverbullet.md/Library/Core/Query/Page]]
