@@ -32,7 +32,7 @@ SilverBullet Pub is configured through [[SETTINGS]].
 First make sure you have the plug installed into your space. Then, from the command line run:
 
 ```bash
-silverbullet plug:run <<path-to-your-space>> pub.publishAll
+SB_DB_BACKEND=memory silverbullet plug:run <<path-to-your-space>> pub.publishAll
 ```
 
 ## Site map
