@@ -2,6 +2,8 @@
 SilverBullet Pub is a simple tool to publish a a subset of your
 [SilverBullet](https://silverbullet.md) space as a static website.
 
+**IMPORTANT NOTE**: This plug has been largely been ambadonned. If you like to try something similar, feel free to fork or build something from scratch!
+
 **Note:** this is still experimental, use at your own risk.
 
 SilverBullet Pub publishes a subset of a space in two formats:
